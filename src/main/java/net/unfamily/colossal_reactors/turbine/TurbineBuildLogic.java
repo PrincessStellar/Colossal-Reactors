@@ -96,13 +96,38 @@ public final class TurbineBuildLogic {
             return false;
         }
         boolean openTop = builder.isOpenTop();
+        int pattern = builder.getRodPattern();
         return switch (builder.getBuildStage()) {
             case STAGE_FRAME -> tickFrame(level, builder, b, openTop);
             case STAGE_CLOSURE_DECK -> tickClosureDeck(level, builder, b);
-            case STAGE_ROD_CONTROLLERS -> tickRodControllers(level, builder, b);
-            case STAGE_RODS -> tickRods(level, builder, b);
-            case STAGE_BLADES -> tickBlades(level, builder, b);
-            case STAGE_COILS -> tickCoils(level, builder, b);
+            case STAGE_ROD_CONTROLLERS -> {
+                if (TurbineRodPatternLogic.skipsRotorContents(pattern)) {
+                    builder.setBuildStage(TurbineRodPatternLogic.skipsCoils(pattern) ? STAGE_DONE : STAGE_COILS);
+                    yield builder.getBuildStage() != STAGE_DONE;
+                }
+                yield tickRodControllers(level, builder, b);
+            }
+            case STAGE_RODS -> {
+                if (TurbineRodPatternLogic.skipsRotorContents(pattern)) {
+                    builder.setBuildStage(TurbineRodPatternLogic.skipsCoils(pattern) ? STAGE_DONE : STAGE_COILS);
+                    yield builder.getBuildStage() != STAGE_DONE;
+                }
+                yield tickRods(level, builder, b);
+            }
+            case STAGE_BLADES -> {
+                if (TurbineRodPatternLogic.skipsRotorContents(pattern)) {
+                    builder.setBuildStage(TurbineRodPatternLogic.skipsCoils(pattern) ? STAGE_DONE : STAGE_COILS);
+                    yield builder.getBuildStage() != STAGE_DONE;
+                }
+                yield tickBlades(level, builder, b);
+            }
+            case STAGE_COILS -> {
+                if (TurbineRodPatternLogic.skipsCoils(pattern)) {
+                    builder.setBuildStage(STAGE_DONE);
+                    yield false;
+                }
+                yield tickCoils(level, builder, b);
+            }
             default -> {
                 builder.setBuildStage(STAGE_DONE);
                 yield false;
@@ -195,7 +220,8 @@ public final class TurbineBuildLogic {
             int zz0 = (xx == x0) ? z0 : b.minZ + 1;
             for (int zz = zz0; zz < b.maxZ; zz++) {
                 builder.setBuildFrameCursor(xx, closure, zz + 1);
-                if (layout.isRodControllerAt(xx, closure, zz, center)) {
+                if (!TurbineRodPatternLogic.skipsRotorContents(builder.getRodPattern())
+                        && layout.isRodControllerAt(xx, closure, zz, center)) {
                     continue;
                 }
                 if (tryPlaceClosureCasing(level, builder, new BlockPos(xx, closure, zz))) {
@@ -216,7 +242,8 @@ public final class TurbineBuildLogic {
             int yy0 = (xx == x0) ? y0 : b.minY + 1;
             for (int yy = yy0; yy < b.maxY; yy++) {
                 builder.setBuildFrameCursor(xx, yy, closure + 1);
-                if (layout.isRodControllerAt(xx, yy, closure, center)) {
+                if (!TurbineRodPatternLogic.skipsRotorContents(builder.getRodPattern())
+                        && layout.isRodControllerAt(xx, yy, closure, center)) {
                     continue;
                 }
                 if (tryPlaceClosureCasing(level, builder, new BlockPos(xx, yy, closure))) {
@@ -237,7 +264,8 @@ public final class TurbineBuildLogic {
             int zz0 = (yy == y0) ? z0 : b.minZ + 1;
             for (int zz = zz0; zz < b.maxZ; zz++) {
                 builder.setBuildFrameCursor(closure, yy, zz + 1);
-                if (layout.isRodControllerAt(closure, yy, zz, center)) {
+                if (!TurbineRodPatternLogic.skipsRotorContents(builder.getRodPattern())
+                        && layout.isRodControllerAt(closure, yy, zz, center)) {
                     continue;
                 }
                 if (tryPlaceClosureCasing(level, builder, new BlockPos(closure, yy, zz))) {
@@ -264,7 +292,12 @@ public final class TurbineBuildLogic {
 
     private static void finishClosureDeck(TurbineBuilderBlockEntity builder) {
         builder.setBuildFrameCursor(Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE);
-        builder.setBuildStage(STAGE_ROD_CONTROLLERS);
+        int pattern = builder.getRodPattern();
+        if (TurbineRodPatternLogic.skipsRotorContents(pattern)) {
+            builder.setBuildStage(TurbineRodPatternLogic.skipsCoils(pattern) ? STAGE_DONE : STAGE_COILS);
+        } else {
+            builder.setBuildStage(STAGE_ROD_CONTROLLERS);
+        }
     }
 
     private static boolean tickRodControllers(ServerLevel level, TurbineBuilderBlockEntity builder, BuildBounds b) {

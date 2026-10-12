@@ -58,6 +58,7 @@ public final class ColossalRecipeData {
 
     @SubscribeEvent
     public static void onTagsUpdated(TagsUpdatedEvent event) {
+        HeatSinkLoader.onTagsUpdated();
         if (event.getUpdateCause() != TagsUpdatedEvent.UpdateCause.SERVER_DATA_LOAD) {
             return;
         }

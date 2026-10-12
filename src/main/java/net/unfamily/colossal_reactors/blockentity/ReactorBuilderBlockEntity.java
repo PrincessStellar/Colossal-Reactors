@@ -196,7 +196,7 @@ public class ReactorBuilderBlockEntity extends BlockEntity implements MenuProvid
     private int buildLiquidLx = Integer.MIN_VALUE, buildLiquidLy = Integer.MIN_VALUE, buildLiquidLz = Integer.MIN_VALUE;
     private int buildHeatLx = Integer.MIN_VALUE, buildHeatLy = Integer.MIN_VALUE, buildHeatLz = Integer.MIN_VALUE;
 
-    private static final int ROD_PATTERN_COUNT = 4;
+    private static final int ROD_PATTERN_COUNT = 5;
     private static final int PATTERN_MODE_COUNT = 4;
 
     public void resetBuildProgress() {

@@ -232,14 +232,14 @@ public final class ReactorSimulation {
         long[] powerPortPositions = controller.getCachedPowerPortPositions();
         long[] resourcePortPositions = controller.getCachedResourcePortPositions();
         if (rodPositions.length == 0 && (result.rodCount() > 0 || result.rodColumns() > 0)) {
-            controller.rebuildPartCaches(level, result);
+            controller.rebuildPartCachesIfNeeded(level, result);
             rodPositions = controller.getCachedRodPositions();
             powerPortPositions = controller.getCachedPowerPortPositions();
             resourcePortPositions = controller.getCachedResourcePortPositions();
         }
         if (rodPositions.length == 0) {
             // Fallback (should be rare): rebuild from bounds.
-            controller.rebuildPartCaches(level, result);
+            controller.rebuildPartCachesIfNeeded(level, result);
             rodPositions = controller.getCachedRodPositions();
             powerPortPositions = controller.getCachedPowerPortPositions();
             resourcePortPositions = controller.getCachedResourcePortPositions();
@@ -452,7 +452,7 @@ public final class ReactorSimulation {
 
         long[] resourcePortPositions = controller.getCachedResourcePortPositions();
         if (resourcePortPositions.length == 0) {
-            controller.rebuildPartCaches(level, result);
+            controller.rebuildPartCachesIfNeeded(level, result);
             resourcePortPositions = controller.getCachedResourcePortPositions();
         }
 
@@ -973,21 +973,25 @@ public final class ReactorSimulation {
 
         // Heat sink counted over FULL interior (1..w-2, 1..h-2, 1..d-2), matching ReactorBuildLogic coolant placement.
         int countAdj = 0, countNon = 0;
-        for (int lx = 1; lx < w - 1; lx++) {
-            for (int ly = 1; ly < h - 1; ly++) {
-                for (int lz = 1; lz < d - 1; lz++) {
-                    if (isSimInteriorCellRod(lx, ly, lz, w, h, d, insetXZ, rodSet)) continue;
-                    boolean adjacentToRod;
-                    if (patternMode == RodPatternLogic.MODE_SUPER_ECONOMY) {
-                        if (!isSimInRodSpace(lx, ly, lz, w, h, d, insetXZ)) continue;
-                        adjacentToRod = isSimRodSpaceCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rodSet);
-                        if (!adjacentToRod) continue;
-                    } else {
-                        adjacentToRod = isSimInteriorCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rodSet);
-                        if (patternMode == RodPatternLogic.MODE_ECONOMY && !adjacentToRod) continue;
+        if (rodPattern != RodPatternLogic.PATTERN_NONE) {
+            for (int lx = 1; lx < w - 1; lx++) {
+                for (int ly = 1; ly < h - 1; ly++) {
+                    for (int lz = 1; lz < d - 1; lz++) {
+                        if (isSimInteriorCellRod(lx, ly, lz, w, h, d, insetXZ, rodSet)) continue;
+                        boolean adjacentToRod;
+                        if (rodPattern == RodPatternLogic.PATTERN_CUSTOM) {
+                            adjacentToRod = false;
+                        } else if (patternMode == RodPatternLogic.MODE_SUPER_ECONOMY) {
+                            if (!isSimInRodSpace(lx, ly, lz, w, h, d, insetXZ)) continue;
+                            adjacentToRod = isSimRodSpaceCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rodSet);
+                            if (!adjacentToRod) continue;
+                        } else {
+                            adjacentToRod = isSimInteriorCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rodSet);
+                            if (patternMode == RodPatternLogic.MODE_ECONOMY && !adjacentToRod) continue;
+                        }
+                        if (adjacentToRod) countAdj++;
+                        else countNon++;
                     }
-                    if (adjacentToRod) countAdj++;
-                    else countNon++;
                 }
             }
         }

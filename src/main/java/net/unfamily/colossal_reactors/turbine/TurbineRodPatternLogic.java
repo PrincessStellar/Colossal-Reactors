@@ -8,6 +8,10 @@ public final class TurbineRodPatternLogic {
 
     public static final int PATTERN_EFFICIENT = 0;
     public static final int PATTERN_PRODUCTIVE = 1;
+    /** Frame + partition wall + coils only (no rods / blades / rod controller). */
+    public static final int PATTERN_CUSTOM = 2;
+    /** Frame + partition wall only (no rods / blades / coils / rod controller). */
+    public static final int PATTERN_NONE = 3;
 
     private TurbineRodPatternLogic() {}
 
@@ -32,8 +36,21 @@ public final class TurbineRodPatternLogic {
         if (rw <= 0 || rd <= 0) {
             return false;
         }
+        if (pattern == PATTERN_CUSTOM || pattern == PATTERN_NONE) {
+            return false;
+        }
         TurbineRodControllerLayout.Center center = TurbineRodControllerLayout.bestPrimaryCenter(rw, rd);
         return rx == center.rx() && rz == center.rz();
+    }
+
+    /** True when the pattern skips rotor contents (rods / blades / rod controller). */
+    public static boolean skipsRotorContents(int pattern) {
+        return pattern == PATTERN_CUSTOM || pattern == PATTERN_NONE;
+    }
+
+    /** True when the pattern also skips coil placement. */
+    public static boolean skipsCoils(int pattern) {
+        return pattern == PATTERN_NONE;
     }
 
     public static boolean isRodForPreview(int rx, int ry, int rz, int rw, int rh, int rd, int pattern) {

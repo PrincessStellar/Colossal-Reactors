@@ -28,8 +28,10 @@ public final class RodPatternLogic {
     public static final int PATTERN_DOTS = 0;
     public static final int PATTERN_CHECKERBOARD = 1;
     public static final int PATTERN_EXPANSION = 2;
-    /** No rods and no heat sinks placed (empty interior). */
-    public static final int PATTERN_NONE = 3;
+    /** No rods; heat sinks / liquids fill the full interior (ignores economy adjacency). */
+    public static final int PATTERN_CUSTOM = 3;
+    /** No rods and no heat sinks placed (empty interior / frame only). */
+    public static final int PATTERN_NONE = 4;
 
     public static final int MODE_OPTIMIZED = 0;
     public static final int MODE_PRODUCTION = 1;
@@ -93,7 +95,7 @@ public final class RodPatternLogic {
             case PATTERN_DOTS -> isRodDotsColumn(rx, rz, rw, rd);
             case PATTERN_CHECKERBOARD -> isRodCheckerboardColumn(rx, rz, rw, rd);
             case PATTERN_EXPANSION -> isRodExpansionColumn(rx, rz, rw, rd, forPreview);
-            case PATTERN_NONE -> false;
+            case PATTERN_CUSTOM, PATTERN_NONE -> false;
             default -> false;
         };
     }

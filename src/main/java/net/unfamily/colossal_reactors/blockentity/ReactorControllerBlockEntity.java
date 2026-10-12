@@ -55,6 +55,9 @@ public class ReactorControllerBlockEntity extends BlockEntity implements MenuPro
     private long[] cachedPowerPortPositions = new long[0];
     private long[] cachedResourcePortPositions = new long[0];
     private long[] cachedRedstonePortPositions = new long[0];
+    /** Validation result the part caches were last built for (see {@link #rebuildPartCachesIfNeeded}). */
+    @Nullable
+    private ReactorValidation.Result partCachesResult;
 
     /**
      * Cached reactor-wide computations that previously scanned the whole interior each tick.
@@ -463,7 +466,19 @@ public class ReactorControllerBlockEntity extends BlockEntity implements MenuPro
 
     // waste clamp handled by clampSharedFuelAndWasteToCapacity()
 
+    /**
+     * Per-tick callers: rebuild only if the caches were not built for this validation result yet.
+     * A reactor without rods or resource ports keeps empty arrays, so rebuilding on "empty" rescanned every tick.
+     * New parts are picked up by the next re-validation.
+     */
+    public void rebuildPartCachesIfNeeded(ServerLevel level, ReactorValidation.Result result) {
+        if (result == null || result != partCachesResult) {
+            rebuildPartCaches(level, result);
+        }
+    }
+
     public void rebuildPartCaches(ServerLevel level, ReactorValidation.Result result) {
+        partCachesResult = level != null ? result : null;
         if (level == null || result == null || !result.valid()) {
             cachedRodPositions = new long[0];
             cachedPowerPortPositions = new long[0];

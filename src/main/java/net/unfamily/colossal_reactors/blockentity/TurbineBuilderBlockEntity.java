@@ -195,7 +195,7 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
     private int buildLiquidLx = Integer.MIN_VALUE, buildLiquidLy = Integer.MIN_VALUE, buildLiquidLz = Integer.MIN_VALUE;
     private int buildHeatLx = Integer.MIN_VALUE, buildHeatLy = Integer.MIN_VALUE, buildHeatLz = Integer.MIN_VALUE;
 
-    private static final int ROD_PATTERN_COUNT = 2;
+    private static final int ROD_PATTERN_COUNT = 4;
     /** Stored GUI setting; displayed layer count is {@link TurbineRodSpaceLayout#appliedCoilLayerCount}. */
     private static final int COIL_LAYER_MIN = 0;
     private static final int COIL_LAYER_MAX = 32;

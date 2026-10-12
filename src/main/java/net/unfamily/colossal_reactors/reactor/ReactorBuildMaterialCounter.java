@@ -88,7 +88,9 @@ public final class ReactorBuildMaterialCounter {
             }
         }
 
-        int heatSinkCells = countHeatSinkCells(w, h, d, insetXZ, rw, rh, rd, rodPattern, patternMode, heatSinkIndex, expansionRodAtCenter);
+        int heatSinkCells = rodPattern == RodPatternLogic.PATTERN_NONE
+                ? 0
+                : countHeatSinkCells(w, h, d, insetXZ, rw, rh, rd, rodPattern, patternMode, heatSinkIndex, expansionRodAtCenter);
 
         return new BuildMaterialCounts(frameCasings, faceCasings, rods, rodControllers, heatSinkCells);
     }
@@ -108,14 +110,16 @@ public final class ReactorBuildMaterialCounter {
                     if (isInteriorCellRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) {
                         continue;
                     }
-                    if (patternMode == RodPatternLogic.MODE_SUPER_ECONOMY) {
-                        if (!isInRodSpace(lx, ly, lz, w, h, d, insetXZ)
-                                || !isRodSpaceCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) {
+                    if (pattern != RodPatternLogic.PATTERN_CUSTOM) {
+                        if (patternMode == RodPatternLogic.MODE_SUPER_ECONOMY) {
+                            if (!isInRodSpace(lx, ly, lz, w, h, d, insetXZ)
+                                    || !isRodSpaceCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) {
+                                continue;
+                            }
+                        } else if (patternMode == RodPatternLogic.MODE_ECONOMY
+                                && !isInteriorCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) {
                             continue;
                         }
-                    } else if (patternMode == RodPatternLogic.MODE_ECONOMY
-                            && !isInteriorCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) {
-                        continue;
                     }
                     count++;
                 }

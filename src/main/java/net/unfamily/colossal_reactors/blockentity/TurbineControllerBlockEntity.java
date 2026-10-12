@@ -68,6 +68,9 @@ public class TurbineControllerBlockEntity extends BlockEntity implements MenuPro
     public record FluidBufferEntry(ResourceLocation fluidId, int mb) {}
 
     private TurbineValidation.Result cachedResult = TurbineValidation.Result.invalid();
+    /** Validation result the part caches were last built for (see {@link #rebuildPartCachesIfNeeded}). */
+    @Nullable
+    private TurbineValidation.Result partCachesResult;
     private long[] cachedPowerPortPositions = new long[0];
     private long[] cachedResourcePortPositions = new long[0];
     private long[] cachedRedstonePortPositions = new long[0];
@@ -589,11 +592,23 @@ public class TurbineControllerBlockEntity extends BlockEntity implements MenuPro
         TurbineSimulation.tick(level, this);
     }
 
+    /**
+     * Per-tick callers: rebuild only if the caches were not built for this validation result yet.
+     * A turbine without rods or ports keeps empty arrays, so rebuilding on "empty" rescanned (and re-synced) every tick.
+     * New parts are picked up by the next re-validation.
+     */
+    public void rebuildPartCachesIfNeeded(ServerLevel level, TurbineValidation.Result result) {
+        if (result == null || result != partCachesResult) {
+            rebuildPartCaches(level, result);
+        }
+    }
+
     public void rebuildPartCaches(ServerLevel level, TurbineValidation.Result result) {
         rebuildPartCaches((Level) level, result);
     }
 
     public void rebuildPartCaches(Level level, TurbineValidation.Result result) {
+        partCachesResult = level != null ? result : null;
         if (level == null || result == null || !result.valid()) {
             cachedPowerPortPositions = new long[0];
             cachedResourcePortPositions = new long[0];

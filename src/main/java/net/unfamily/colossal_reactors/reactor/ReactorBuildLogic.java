@@ -165,6 +165,12 @@ public final class ReactorBuildLogic {
                 continue;
             }
             if (stage == STAGE_ROD_CONTROLLERS) {
+                if (pattern == RodPatternLogic.PATTERN_NONE || pattern == RodPatternLogic.PATTERN_CUSTOM) {
+                    builder.setBuildStage(STAGE_LIQUIDS);
+                    builder.setBuildLiquidCursor(Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE);
+                    builder.setChanged();
+                    continue;
+                }
                 if (tickRodControllers(builder, level, minX, minY, minZ, maxY, insetXZ, rw, rd, pattern, expansionRodAtCenter)) return true;
                 builder.setBuildStage(STAGE_RODS);
                 builder.setBuildRodCursor(Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE);
@@ -172,6 +178,12 @@ public final class ReactorBuildLogic {
                 continue;
             }
             if (stage == STAGE_RODS) {
+                if (pattern == RodPatternLogic.PATTERN_NONE || pattern == RodPatternLogic.PATTERN_CUSTOM) {
+                    builder.setBuildStage(STAGE_LIQUIDS);
+                    builder.setBuildLiquidCursor(Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE);
+                    builder.setChanged();
+                    continue;
+                }
                 if (tickRods(builder, level, minX, minY, minZ, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) return true;
                 builder.setBuildStage(STAGE_LIQUIDS);
                 builder.setBuildLiquidCursor(Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE);
@@ -179,7 +191,8 @@ public final class ReactorBuildLogic {
                 continue;
             }
             if (stage == STAGE_LIQUIDS) {
-                if (!HeatSinkLoader.requiresLiquidPlacement(builder.getSelectedHeatSinkIndex())) {
+                if (pattern == RodPatternLogic.PATTERN_NONE
+                        || !HeatSinkLoader.requiresLiquidPlacement(builder.getSelectedHeatSinkIndex())) {
                     builder.setBuildStage(STAGE_HEAT_SINKS);
                     builder.setBuildHeatCursor(Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE);
                     builder.setChanged();
@@ -192,6 +205,11 @@ public final class ReactorBuildLogic {
                 continue;
             }
             if (stage == STAGE_HEAT_SINKS) {
+                if (pattern == RodPatternLogic.PATTERN_NONE) {
+                    builder.setBuildStage(STAGE_DONE);
+                    builder.setChanged();
+                    return false;
+                }
                 if (tickHeatSinks(builder, level, minX, minY, minZ, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) return true;
                 builder.setBuildStage(STAGE_DONE);
                 builder.setChanged();
@@ -340,9 +358,11 @@ public final class ReactorBuildLogic {
                 for (int lz = lzStart; lz < d - 1; lz++) {
                     builder.setBuildLiquidCursor(lx, ly, lz + 1);
                     if (isInteriorCellRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) continue;
-                    if (patternMode == RodPatternLogic.MODE_SUPER_ECONOMY) {
-                        if (!isInRodSpace(lx, ly, lz, w, h, d, insetXZ) || !isRodSpaceCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) continue;
-                    } else if (patternMode == RodPatternLogic.MODE_ECONOMY && !isInteriorCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) continue;
+                    if (pattern != RodPatternLogic.PATTERN_CUSTOM) {
+                        if (patternMode == RodPatternLogic.MODE_SUPER_ECONOMY) {
+                            if (!isInRodSpace(lx, ly, lz, w, h, d, insetXZ) || !isRodSpaceCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) continue;
+                        } else if (patternMode == RodPatternLogic.MODE_ECONOMY && !isInteriorCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) continue;
+                    }
                     Fluid fluid = builder.getFluidTank().getFluid().getFluid();
                     if (fluid == null || fluid == Fluids.EMPTY
                             || !HeatSinkLoader.isFluidMatchingSelectedHeatSink(level.registryAccess(), builder.getSelectedHeatSinkIndex(), fluid)) {
@@ -393,9 +413,11 @@ public final class ReactorBuildLogic {
                 for (int lz = lzStart; lz < d - 1; lz++) {
                     builder.setBuildHeatCursor(lx, ly, lz + 1);
                     if (isInteriorCellRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) continue;
-                    if (patternMode == RodPatternLogic.MODE_SUPER_ECONOMY) {
-                        if (!isInRodSpace(lx, ly, lz, w, h, d, insetXZ) || !isRodSpaceCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) continue;
-                    } else if (patternMode == RodPatternLogic.MODE_ECONOMY && !isInteriorCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) continue;
+                    if (pattern != RodPatternLogic.PATTERN_CUSTOM) {
+                        if (patternMode == RodPatternLogic.MODE_SUPER_ECONOMY) {
+                            if (!isInRodSpace(lx, ly, lz, w, h, d, insetXZ) || !isRodSpaceCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) continue;
+                        } else if (patternMode == RodPatternLogic.MODE_ECONOMY && !isInteriorCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) continue;
+                    }
                     BlockPos pos = new BlockPos(minX + lx, minY + ly, minZ + lz);
                     if (!canReplaceForSolidBlock(level, pos)) continue;
                     ItemStack heatSink = findHeatSinkBlock(builder);
@@ -729,7 +751,7 @@ public final class ReactorBuildLogic {
             }
         }
 
-        if (heatSinkIndex > 0) {
+        if (heatSinkIndex > 0 && pattern != RodPatternLogic.PATTERN_NONE) {
             boolean countLiquid = HeatSinkLoader.requiresLiquidPlacement(heatSinkIndex);
             boolean countSolid = !HeatSinkLoader.shouldSkipSolidHeatSinkAutoPlacement(heatSinkIndex);
             for (int ly = 1; ly < h - 1; ly++) {
@@ -738,14 +760,16 @@ public final class ReactorBuildLogic {
                         if (isInteriorCellRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) {
                             continue;
                         }
-                        if (patternMode == RodPatternLogic.MODE_SUPER_ECONOMY) {
-                            if (!isInRodSpace(lx, ly, lz, w, h, d, insetXZ)
-                                    || !isRodSpaceCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) {
+                        if (pattern != RodPatternLogic.PATTERN_CUSTOM) {
+                            if (patternMode == RodPatternLogic.MODE_SUPER_ECONOMY) {
+                                if (!isInRodSpace(lx, ly, lz, w, h, d, insetXZ)
+                                        || !isRodSpaceCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) {
+                                    continue;
+                                }
+                            } else if (patternMode == RodPatternLogic.MODE_ECONOMY
+                                    && !isInteriorCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) {
                                 continue;
                             }
-                        } else if (patternMode == RodPatternLogic.MODE_ECONOMY
-                                && !isInteriorCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) {
-                            continue;
                         }
                         BlockState state = level.getBlockState(new BlockPos(minX + lx, minY + ly, minZ + lz));
                         if (countLiquid && isPlacedLiquidHeatSink(state, registryAccess, heatSinkIndex)) {

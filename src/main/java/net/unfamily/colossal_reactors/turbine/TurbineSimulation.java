@@ -122,7 +122,7 @@ public final class TurbineSimulation {
         if (controller.getCachedRodPositions().length == 0
                 || (resourcePortPositions.length == 0 && powerPortPositions.length == 0
                 && (result.maxSteamMbPerTick() > 0 || result.estimatedRfPerTick() > 0))) {
-            controller.rebuildPartCaches(level, result);
+            controller.rebuildPartCachesIfNeeded(level, result);
             resourcePortPositions = controller.getCachedResourcePortPositions();
             powerPortPositions = controller.getCachedPowerPortPositions();
         }
@@ -249,7 +249,7 @@ public final class TurbineSimulation {
     public static void flushFluidBuffersToEject(ServerLevel level, TurbineControllerBlockEntity controller) {
         long[] resourcePortPositions = controller.getCachedResourcePortPositions();
         if (resourcePortPositions.length == 0 && controller.getCachedResult().valid()) {
-            controller.rebuildPartCaches(level, controller.getCachedResult());
+            controller.rebuildPartCachesIfNeeded(level, controller.getCachedResult());
             resourcePortPositions = controller.getCachedResourcePortPositions();
         }
         TurbineGenerationDefinition gen = TurbineGenerationLoader.getDefault();
