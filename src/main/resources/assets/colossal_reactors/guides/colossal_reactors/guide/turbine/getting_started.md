@@ -33,6 +33,21 @@ Build a closed turbine shell with a rotor and coils inside, then pick one of the
 
 The [Turbine Builder](turbine_builder.md) places the shell, rotor, and coils — **not** the controller or ports.
 
+## Coils
+
+The **coil zone** is the **upper interior** above the divider wall (under the roof). It must be filled with **metal storage blocks** the mod recognizes — copper, gold, netherite, electrum, and so on.
+
+| | Detail |
+|---|---|
+| **Role** | Multiplies **RF** from steam (`coil strength` in the RF formula below) |
+| **Where** | Interior layers **above** the divider — not the rotor / blade space |
+| **What to use** | Normal **storage blocks** (e.g. copper block). Check **JEI** for strength and caps |
+| **What not to use** | Reactor **heating coil** blocks — those are a different machine part |
+| **Empty cells** | Still validate as weak coil (~**30%** strength by default) |
+| **Layers** | Example uses **two**; the [Turbine Builder](turbine_builder.md) can set how many |
+
+Mixing metals is fine — the turbine uses the **average** strength of the whole zone. Full numbers: [Steam, RF, and coils](turbine_generation_and_coils.md).
+
 ## Complete example
 
 <GameScene zoom="4" interactive={true} background="transparent">

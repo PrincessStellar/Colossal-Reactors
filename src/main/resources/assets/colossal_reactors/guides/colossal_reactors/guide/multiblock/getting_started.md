@@ -30,6 +30,19 @@ Build a closed reactor shell, then pick one of the two setups below. Rotate the 
 
 The [Reactor Builder](reactor_builder.md) places casing, glass (if in buffer), rods, and heat sinks — **not** the controller or ports.
 
+## Heat sinks vs coolant
+
+These are **two different systems**:
+
+| | **Heat sinks** (passive) | **Coolant** (active) |
+|---|---|---|
+| **What** | Blocks or **stationary** liquid fill **inside** the shell next to rods | Working **fluid** in the controller buffer / resource-port loop |
+| **How you place it** | Builder / by hand in the interior (including “fluid heat sinks”) | Controller coolant slot, or **INSERT/EXTRACT** ports in Setup 2 |
+| **Consumed while running?** | **No** | **Yes** (and may produce steam / exhaust) |
+| **Needed for RF?** | Optional (changes RF and fuel use) | **No** for Setup 1 — leave the coolant buffer **empty** |
+
+Fluid heat sinks placed as interior blocks are **not** the same as piping water into the coolant circuit. Details: [Reactor structure](reactor_structure.md).
+
 ## Complete example
 
 <GameScene zoom="4" interactive={true} background="transparent">
