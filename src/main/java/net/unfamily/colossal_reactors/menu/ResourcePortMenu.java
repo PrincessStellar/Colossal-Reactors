@@ -142,20 +142,21 @@ public class ResourcePortMenu extends AbstractContainerMenu {
 
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
+        // No machine item slot (turbine resource port): do not shift-move within player inv
+        // (moveItemStackTo on the same 0..36 range duplicates stacks).
+        if (!showItemSlot()) {
+            return ItemStack.EMPTY;
+        }
         ItemStack stack = ItemStack.EMPTY;
         Slot slot = slots.get(index);
         if (slot != null && slot.hasItem()) {
             ItemStack stackInSlot = slot.getItem();
             stack = stackInSlot.copy();
-            if (showItemSlot()) {
-                if (index == 0) {
-                    if (!moveItemStackTo(stackInSlot, 1, 37, true)) {
-                        return ItemStack.EMPTY;
-                    }
-                } else if (!moveItemStackTo(stackInSlot, 0, 1, false)) {
+            if (index == 0) {
+                if (!moveItemStackTo(stackInSlot, 1, 37, true)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (!moveItemStackTo(stackInSlot, 0, 36, true)) {
+            } else if (!moveItemStackTo(stackInSlot, 0, 1, false)) {
                 return ItemStack.EMPTY;
             }
             if (stackInSlot.isEmpty()) {

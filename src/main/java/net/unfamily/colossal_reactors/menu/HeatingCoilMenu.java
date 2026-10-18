@@ -32,6 +32,8 @@ public class HeatingCoilMenu extends AbstractContainerMenu {
     private final HeatingCoilBlockEntity blockEntity;
     @Nullable
     private final BlockPos menuBlockPos;
+    /** Set at open from whether the machine item slot was added (not from synced GUI flags). */
+    private final boolean hasMachineItemSlot;
 
     /** Client: block pos from open packet. */
     public HeatingCoilMenu(int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
@@ -47,7 +49,7 @@ public class HeatingCoilMenu extends AbstractContainerMenu {
         this.levelAccess = ContainerLevelAccess.create(level, pos);
         this.data = new SimpleContainerData(HeatingCoilBlockEntity.DATA_COUNT);
         addDataSlots(data);
-        addCoilSlots(blockEntity);
+        this.hasMachineItemSlot = addCoilSlots(blockEntity);
         addPlayerSlots(playerInventory);
     }
 
@@ -59,15 +61,18 @@ public class HeatingCoilMenu extends AbstractContainerMenu {
         this.levelAccess = ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos());
         this.data = data;
         addDataSlots(data);
-        addCoilSlots(blockEntity);
+        this.hasMachineItemSlot = addCoilSlots(blockEntity);
         addPlayerSlots(playerInventory);
     }
 
-    private void addCoilSlots(@Nullable HeatingCoilBlockEntity coil) {
+    /** @return true if the machine item slot was added */
+    private boolean addCoilSlots(@Nullable HeatingCoilBlockEntity coil) {
         if (coil != null && coil.hasItemRequirement()) {
             addSlot(new SlotItemHandler(coil.getItemHandler(), 0,
                     ResourcePortGuiLayout.ITEM_SLOT_X, ResourcePortGuiLayout.ITEM_SLOT_Y));
+            return true;
         }
+        return false;
     }
 
     /** True if this menu is for the given block pos (used to close it when coil state changes). */
@@ -103,20 +108,21 @@ public class HeatingCoilMenu extends AbstractContainerMenu {
 
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
+        // No machine item slot (energy/fluid-only coils): do not shift-move within player inv
+        // (moveItemStackTo on the same 0..36 range duplicates stacks).
+        if (!hasMachineItemSlot) {
+            return ItemStack.EMPTY;
+        }
         ItemStack stack = ItemStack.EMPTY;
         Slot slot = slots.get(index);
         if (slot != null && slot.hasItem()) {
             ItemStack stackInSlot = slot.getItem();
             stack = stackInSlot.copy();
-            if (showItemSlot()) {
-                if (index == 0) {
-                    if (!moveItemStackTo(stackInSlot, 1, 37, true)) {
-                        return ItemStack.EMPTY;
-                    }
-                } else if (!moveItemStackTo(stackInSlot, 0, 1, false)) {
+            if (index == 0) {
+                if (!moveItemStackTo(stackInSlot, 1, 37, true)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (!moveItemStackTo(stackInSlot, 0, 36, true)) {
+            } else if (!moveItemStackTo(stackInSlot, 0, 1, false)) {
                 return ItemStack.EMPTY;
             }
             if (stackInSlot.isEmpty()) {
