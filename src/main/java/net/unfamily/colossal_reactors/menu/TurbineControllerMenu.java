@@ -28,15 +28,16 @@ public class TurbineControllerMenu extends AbstractContainerMenu {
     private static final int INDEX_REDSTONE_GATE_SATISFIED = 9;
     private static final int INDEX_STEAM_STORED_MB = 10;
     private static final int INDEX_STEAM_CAPACITY_MB = 11;
-    private static final int DATA_COUNT = 12;
+    private static final int INDEX_POS_X = 12;
+    private static final int INDEX_POS_Y = 13;
+    private static final int INDEX_POS_Z = 14;
+    private static final int DATA_COUNT = 15;
 
     private final ContainerLevelAccess levelAccess;
     private final ContainerData data;
-    private final BlockPos controllerPos;
 
     public TurbineControllerMenu(int containerId, Inventory playerInventory, TurbineControllerBlockEntity be) {
         super(ModMenuTypes.TURBINE_CONTROLLER_MENU.get(), containerId);
-        this.controllerPos = be.getBlockPos();
         this.levelAccess = ContainerLevelAccess.create(be.getLevel(), be.getBlockPos());
         this.data = new ContainerData() {
             @Override
@@ -63,6 +64,9 @@ public class TurbineControllerMenu extends AbstractContainerMenu {
                     case INDEX_REDSTONE_GATE_SATISFIED -> be.isRedstoneGateOpen() ? 1 : 0;
                     case INDEX_STEAM_STORED_MB -> Math.max(0, be.getTotalSteamInputMb());
                     case INDEX_STEAM_CAPACITY_MB -> Math.max(0, be.getSteamInputCapacityMb());
+                    case INDEX_POS_X -> be.getBlockPos().getX();
+                    case INDEX_POS_Y -> be.getBlockPos().getY();
+                    case INDEX_POS_Z -> be.getBlockPos().getZ();
                     default -> 0;
                 };
             }
@@ -80,7 +84,6 @@ public class TurbineControllerMenu extends AbstractContainerMenu {
 
     public TurbineControllerMenu(int containerId, Inventory playerInventory) {
         super(ModMenuTypes.TURBINE_CONTROLLER_MENU.get(), containerId);
-        this.controllerPos = BlockPos.ZERO;
         this.levelAccess = ContainerLevelAccess.NULL;
         this.data = new SimpleContainerData(DATA_COUNT);
         addDataSlots(data);
@@ -88,7 +91,7 @@ public class TurbineControllerMenu extends AbstractContainerMenu {
 
     /** Synced block pos for reboot button (client). */
     public BlockPos getControllerBlockPos() {
-        return controllerPos;
+        return new BlockPos(data.get(INDEX_POS_X), data.get(INDEX_POS_Y), data.get(INDEX_POS_Z));
     }
 
     public boolean isValid() { return data.get(INDEX_VALID) != 0; }

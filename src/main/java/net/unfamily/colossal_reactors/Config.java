@@ -390,6 +390,9 @@ public class Config {
     public static final ModConfigSpec.DoubleValue TURBINE_EMPTY_COIL_EFFICIENCY = BUILDER
             .comment("Efficiency for air or unknown blocks in coil zone. Default: 0.3")
             .defineInRange("000_emptyCoilEfficiency", 0.3, 0.0, 10.0);
+    public static final ModConfigSpec.BooleanValue TURBINE_LEGACY_IGNORE_AIR_IN_COIL_AVERAGE = BUILDER
+            .comment("Recreate old bug: skip air cells when averaging coil-zone efficiency (solid coils only). Default: false (air counted)")
+            .define("001_legacyIgnoreAirInCoilAverage", false);
 
     static {
         BUILDER.pop();

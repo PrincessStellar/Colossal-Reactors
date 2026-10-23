@@ -273,7 +273,9 @@ public final class TurbineValidation {
                             if (!ElecCoilLoader.isCoilBlock(state, registry) && !state.isAir()) {
                                 return fail(FailureCode.COIL_ZONE_BLOCK, p, report.build());
                             }
-                            if (!state.isAir()) {
+                            boolean countInAverage = !state.isAir()
+                                    || !Boolean.TRUE.equals(Config.TURBINE_LEGACY_IGNORE_AIR_IN_COIL_AVERAGE.get());
+                            if (countInAverage) {
                                 coilBlockCount++;
                                 var m = ElecCoilLoader.getModifiersForBlockOrDefault(state, registry);
                                 sumCoe += m.effCoe();

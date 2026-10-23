@@ -44,6 +44,7 @@ import net.unfamily.colossal_reactors.fuel.FuelLoader;
 import net.unfamily.colossal_reactors.integration.mekanism.MaterialSelector;
 import net.unfamily.colossal_reactors.reactor.ReactorBuildMaterialCounter;
 import net.unfamily.colossal_reactors.reactor.ReactorSimulation;
+import net.unfamily.colossal_reactors.reactor.RodPatternLogic;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -746,12 +747,16 @@ public class ReactorBuilderScreen extends AbstractContainerScreen<ReactorBuilder
 
     /**
      * Panel order: (1) Status + simulation stats, blank line, (2) Required for build + material counts.
+     * Custom pattern: required-for-build only (stats are not determinable).
      */
     private int renderSimulationPanel(GuiGraphics guiGraphics) {
         int y = topPos + SIM_PANEL_Y - simulationScrollbar.getScrollOffset();
         int contentStart = y;
-        y = renderSimulationStatusAndStats(guiGraphics, y);
-        y += SIM_LINE_HEIGHT;
+        boolean customPattern = menu.getRodPattern() == RodPatternLogic.PATTERN_CUSTOM;
+        if (!customPattern) {
+            y = renderSimulationStatusAndStats(guiGraphics, y);
+            y += SIM_LINE_HEIGHT;
+        }
         y = renderSimulationBuildRequirements(guiGraphics, y);
         return y - contentStart;
     }
@@ -806,6 +811,8 @@ public class ReactorBuilderScreen extends AbstractContainerScreen<ReactorBuilder
     private int renderMaterialCounts(GuiGraphics guiGraphics, int y) {
         int textX = leftPos + SIM_PANEL_X;
         ReactorBuildMaterialCounter.BuildMaterialCounts counts = getMaterialCounts();
+        boolean customPattern = menu.getRodPattern() == RodPatternLogic.PATTERN_CUSTOM;
+        String unknown = "?";
         y = ReactorPanelText.drawMetricRow(guiGraphics, font, textX, y, SIM_LINE_HEIGHT,
                 "gui.colossal_reactors.reactor_builder.calculate.frame_casings.label",
                 Component.translatable("gui.colossal_reactors.reactor_builder.calculate.frame_casings.value",
@@ -817,11 +824,11 @@ public class ReactorBuilderScreen extends AbstractContainerScreen<ReactorBuilder
         y = ReactorPanelText.drawMetricRow(guiGraphics, font, textX, y, SIM_LINE_HEIGHT,
                 "gui.colossal_reactors.reactor_builder.calculate.rods.label",
                 Component.translatable("gui.colossal_reactors.reactor_builder.calculate.rods.value",
-                        GuiNumberFormat.format(counts.rods())));
+                        customPattern ? unknown : GuiNumberFormat.format(counts.rods())));
         y = ReactorPanelText.drawMetricRow(guiGraphics, font, textX, y, SIM_LINE_HEIGHT,
                 "gui.colossal_reactors.reactor_builder.calculate.rod_controllers.label",
                 Component.translatable("gui.colossal_reactors.reactor_builder.calculate.rod_controllers.value",
-                        GuiNumberFormat.format(counts.rodControllers())));
+                        customPattern ? unknown : GuiNumberFormat.format(counts.rodControllers())));
         y = ReactorPanelText.drawMetricRow(guiGraphics, font, textX, y, SIM_LINE_HEIGHT,
                 "gui.colossal_reactors.reactor_builder.calculate.heat_sinks.label",
                 Component.translatable("gui.colossal_reactors.reactor_builder.calculate.heat_sinks.value",

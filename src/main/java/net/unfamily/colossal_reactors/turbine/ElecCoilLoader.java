@@ -64,7 +64,7 @@ public final class ElecCoilLoader {
     }
 
     public static boolean isVisibleInJei(ElecCoilDefinition def) {
-        return def != null && !isAirOnlyDefinition(def) && DatapackSelectorValidator.sanitizeElecCoil(def) != null;
+        return def != null && DatapackSelectorValidator.sanitizeElecCoil(def) != null;
     }
 
     public static List<ElecCoilDefinition> getVisibleDefinitions() {
