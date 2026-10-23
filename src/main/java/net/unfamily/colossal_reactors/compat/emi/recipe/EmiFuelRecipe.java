@@ -24,7 +24,7 @@ import net.unfamily.colossal_reactors.fuel.FuelDefinition;
 import net.unfamily.colossal_reactors.fuel.FuelMedium;
 
 public final class EmiFuelRecipe implements EmiRecipe {
-    private static final int W = 180;
+    private static final int W = 230;
     private static final int H = 106;
 
     private final FuelDefinition recipe;

@@ -41,7 +41,7 @@ public final class ColossalReiCategories {
 
     private static final DisplayCategory<ColossalReiDisplay>[] STANDARD = new DisplayCategory[] {
             category(COOLANT, "jei.colossal_reactors.reactor_coolant", ModBlocks.RESOURCE_PORT.get().asItem().getDefaultInstance(), 180, 62, true),
-            category(FUEL, "jei.colossal_reactors.reactor_fuel", ModBlocks.REACTOR_ROD.get().asItem().getDefaultInstance(), 180, 106, true),
+            category(FUEL, "jei.colossal_reactors.reactor_fuel", ModBlocks.REACTOR_ROD.get().asItem().getDefaultInstance(), 230, 106, true),
             category(HEAT_SINK, "jei.colossal_reactors.reactor_heat_sink", ModBlocks.REACTOR_GLASS.get().asItem().getDefaultInstance(), 180, 54, false),
             category(MELTER, "jei.colossal_reactors.melter", ModBlocks.MELTER.get().asItem().getDefaultInstance(), 180, 78, true),
             category(MELTER_HEAT, "jei.colossal_reactors.melter_heat_source", ModBlocks.MELTER.get().asItem().getDefaultInstance(), 180, 52, false),

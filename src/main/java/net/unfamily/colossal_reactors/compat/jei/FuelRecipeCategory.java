@@ -31,7 +31,7 @@ import net.unfamily.colossal_reactors.compat.RecipeViewerIds;
 public class FuelRecipeCategory implements IRecipeCategory<FuelJeiRecipe> {
 
     public static final ResourceLocation UID = RecipeViewerIds.REACTOR_FUEL;
-    private static final int WIDTH = 180;
+    private static final int WIDTH = 230;
     private static final int HEIGHT = 106;
 
     public static final RecipeType<FuelJeiRecipe> RECIPE_TYPE = new RecipeType<>(UID, FuelJeiRecipe.class);
