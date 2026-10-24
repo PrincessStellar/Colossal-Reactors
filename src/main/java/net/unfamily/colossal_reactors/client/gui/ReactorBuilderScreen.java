@@ -296,6 +296,7 @@ public class ReactorBuilderScreen extends AbstractContainerScreen<ReactorBuilder
         designEditBox = new EditBox(font, leftPos + DESIGN_EDIT_X, topPos + DESIGN_EDIT_Y, DESIGN_EDIT_W, DESIGN_EDIT_H,
                 Component.translatable("gui.colossal_reactors.builder.website_design"));
         designEditBox.setMaxLength(512);
+        designEditBox.setTooltip(Tooltip.create(Component.translatable("gui.colossal_reactors.builder.website_design.tooltip")));
         designEditBox.setResponder(this::onDesignEdited);
         if (menu.getBlockEntity() != null) {
             String code = menu.getBlockEntity().getWebsiteDesign();
@@ -607,6 +608,21 @@ public class ReactorBuilderScreen extends AbstractContainerScreen<ReactorBuilder
         }
     }
 
+    private void pasteDesignFromClipboard() {
+        if (minecraft == null || designEditBox == null) {
+            return;
+        }
+        String clip = minecraft.keyboardHandler.getClipboard();
+        if (clip == null) {
+            return;
+        }
+        clip = clip.trim();
+        if (clip.isEmpty()) {
+            return;
+        }
+        designEditBox.setValue(clip);
+    }
+
     private void updateWidgetVisibility() {
         boolean showBuilder = viewMode == ViewMode.BUILDER;
         boolean showLink = viewMode == ViewMode.WEBSITE_LINK;
@@ -786,6 +802,10 @@ public class ReactorBuilderScreen extends AbstractContainerScreen<ReactorBuilder
         }
         int x = (int) mouseX;
         int y = (int) mouseY;
+        if (button == 2 && designEditBox != null && designEditBox.visible && isInWidget(x, y, designEditBox)) {
+            pasteDesignFromClipboard();
+            return true;
+        }
         if (button == 1) {
             if (designEditBox != null && designEditBox.visible && isInWidget(x, y, designEditBox)) {
                 designEditBox.setValue("");

@@ -496,6 +496,7 @@
   "gui.colossal_reactors.builder.copy_link": "Copia link",
   "gui.colossal_reactors.builder.back": "Indietro",
   "gui.colossal_reactors.builder.website_design": "Design sito web",
+  "gui.colossal_reactors.builder.website_design.tooltip": "Incolla qui un design code con Ctrl+V oppure middle-click.",
   "gui.colossal_reactors.builder.set_website_design": "Imposta il design dal sito",
   "gui.colossal_reactors.builder.invalid_website_design": "Codice design non valido",
   "gui.colossal_reactors.builder.website_disclaimer": "Si apre un sito di terze parti (ModDecoded). Gli autori di Colossal Reactors non si assumono responsabilità per quel sito o i suoi contenuti.",
