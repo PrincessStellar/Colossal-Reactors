@@ -97,6 +97,11 @@ public class ModPayloads {
                 ReactorBuilderMarkInputPayload::handle
         );
         registrar.playToServer(
+                BuilderMarkFilterSetPayload.TYPE,
+                BuilderMarkFilterSetPayload.STREAM_CODEC,
+                BuilderMarkFilterSetPayload::handle
+        );
+        registrar.playToServer(
                 ReactorBuilderWebsiteDesignPayload.TYPE,
                 ReactorBuilderWebsiteDesignPayload.STREAM_CODEC,
                 ReactorBuilderWebsiteDesignPayload::handle

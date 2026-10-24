@@ -447,7 +447,7 @@
   "message.colossal_reactors.turbine_invalid.controller_face_y": "Non valida: il controller va su un lato verticale (N/S/E/O), non sopra o sotto",
   "message.colossal_reactors.turbine_invalid.too_large": "Non valida: turbina troppo grande (%s x %s x %s)",
   "message.colossal_reactors.turbine_invalid.no_rod_controller": "Non valida: manca il controller barra turbina o il muro di separazione bobine/barre è incompleto o errato",
-  "message.colossal_reactors.turbine_invalid.multiple_rod_controllers": "Non valido: rod controller trovati (%s) — ciascuno deve allinearsi a una colonna di rod",
+  "message.colossal_reactors.turbine_invalid.multiple_rod_controllers": "Non valido: rod controller trovati (%s) — ciascuno deve stare sul deck sopra una colonna di rod",
   "message.colossal_reactors.turbine_invalid.rod_controller_border": "Non valida: il controller barra turbina deve essere nell'interno",
   "message.colossal_reactors.turbine_invalid.rod_controller_facing": "Non valida: controller barra turbina senza orientamento",
   "message.colossal_reactors.turbine_invalid.shell_gap": "Non valida: guscio incompleto o blocco errato sul bordo",

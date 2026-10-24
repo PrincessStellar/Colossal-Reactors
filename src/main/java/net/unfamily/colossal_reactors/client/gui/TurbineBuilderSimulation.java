@@ -5,6 +5,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.unfamily.colossal_reactors.turbine.TurbineSimulation;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.function.BiPredicate;
+
 /** Builder GUI simulation delegate. */
 public final class TurbineBuilderSimulation {
 
@@ -16,7 +18,7 @@ public final class TurbineBuilderSimulation {
             int placementAxisIndex,
             int rodPattern, int coilIndex, int storedCoilSetting) {
         return run(registryAccess, sizeLeft, sizeRight, sizeHeight, sizeDepth,
-                placementAxisIndex, rodPattern, coilIndex, storedCoilSetting, null);
+                placementAxisIndex, rodPattern, coilIndex, storedCoilSetting, null, null, false);
     }
 
     public static TurbineSimulation.SimulationResult run(
@@ -25,8 +27,36 @@ public final class TurbineBuilderSimulation {
             int placementAxisIndex,
             int rodPattern, int coilIndex, int storedCoilSetting,
             @Nullable ResourceLocation generationId) {
+        return run(registryAccess, sizeLeft, sizeRight, sizeHeight, sizeDepth,
+                placementAxisIndex, rodPattern, coilIndex, storedCoilSetting, generationId,
+                null, false, Integer.MAX_VALUE);
+    }
+
+    public static TurbineSimulation.SimulationResult run(
+            RegistryAccess registryAccess,
+            int sizeLeft, int sizeRight, int sizeHeight, int sizeDepth,
+            int placementAxisIndex,
+            int rodPattern, int coilIndex, int storedCoilSetting,
+            @Nullable ResourceLocation generationId,
+            @Nullable BiPredicate<Integer, Integer> websiteRodOverride,
+            boolean websiteClimbProfile) {
+        return run(registryAccess, sizeLeft, sizeRight, sizeHeight, sizeDepth,
+                placementAxisIndex, rodPattern, coilIndex, storedCoilSetting, generationId,
+                websiteRodOverride, websiteClimbProfile, Integer.MAX_VALUE);
+    }
+
+    public static TurbineSimulation.SimulationResult run(
+            RegistryAccess registryAccess,
+            int sizeLeft, int sizeRight, int sizeHeight, int sizeDepth,
+            int placementAxisIndex,
+            int rodPattern, int coilIndex, int storedCoilSetting,
+            @Nullable ResourceLocation generationId,
+            @Nullable BiPredicate<Integer, Integer> websiteRodOverride,
+            boolean websiteClimbProfile,
+            int websiteBladeRingCap) {
         return TurbineSimulation.simulateFromBuilderParams(
                 registryAccess, sizeLeft, sizeRight, sizeHeight, sizeDepth,
-                placementAxisIndex, rodPattern, coilIndex, storedCoilSetting, generationId);
+                placementAxisIndex, rodPattern, coilIndex, storedCoilSetting, generationId,
+                websiteRodOverride, websiteClimbProfile, websiteBladeRingCap);
     }
 }

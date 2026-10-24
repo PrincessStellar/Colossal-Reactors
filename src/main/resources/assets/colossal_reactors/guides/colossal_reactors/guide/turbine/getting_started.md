@@ -74,8 +74,8 @@ See [Steam, RF, and coils](turbine_generation_and_coils.md) for the full breakdo
 
 - **Steam supply** — capped by blade count and layout; more balanced rings → higher steam/tick.
 - **Coil blocks** — metal storage blocks in the **two upper interior layers** (copper, gold, netherite, …). Empty coil cells count as weak (~30% strength); check JEI for block values.
-- **Blade height bonus** — rings that grow taller toward the divider gain **+3%** per ascending layer with more blades; shrinking rings lose **−3%**. **Efficient** vs **Productive** layouts matter — see [Rods and blades](turbine_rod_and_blades.md).
-- **Valid formation** — shell, coils, rod controller, and ports must all validate before generation runs.
+- **Blade height bonus** — rings that grow taller toward the divider gain **+3%** per ascending layer with more blades; shrinking rings lose **−3%**. Multi-column builds need a **rod controller on every column** or take **−5%** — see [Rods and blades](turbine_rod_and_blades.md).
+- **Valid formation** — shell, coils, rod controller(s) on the closure deck, and ports must all validate before generation runs.
 
 ## Setup 1: Simple energy (standalone steam)
 

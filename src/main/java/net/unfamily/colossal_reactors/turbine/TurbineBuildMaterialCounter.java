@@ -2,6 +2,10 @@ package net.unfamily.colossal_reactors.turbine;
 
 import net.minecraft.core.RegistryAccess;
 
+import org.jetbrains.annotations.Nullable;
+
+import java.util.function.BiPredicate;
+
 /**
  * Client-safe material estimate for the Turbine Builder.
  */
@@ -29,7 +33,7 @@ public final class TurbineBuildMaterialCounter {
             int sizeLeft, int sizeRight, int sizeHeight, int sizeDepth,
             int rodPattern, int coilIndex, int coilLayerCount, boolean openTop) {
         return estimate(registryAccess, sizeLeft, sizeRight, sizeHeight, sizeDepth,
-                TurbinePlacementAxis.DEFAULT_INDEX, rodPattern, coilIndex, coilLayerCount, openTop);
+                TurbinePlacementAxis.DEFAULT_INDEX, rodPattern, coilIndex, coilLayerCount, openTop, null, false);
     }
 
     public static BuildMaterialCounts estimate(
@@ -37,6 +41,31 @@ public final class TurbineBuildMaterialCounter {
             int sizeLeft, int sizeRight, int sizeHeight, int sizeDepth,
             int placementAxisIndex,
             int rodPattern, int coilIndex, int storedCoilSetting, boolean openTop) {
+        return estimate(registryAccess, sizeLeft, sizeRight, sizeHeight, sizeDepth,
+                placementAxisIndex, rodPattern, coilIndex, storedCoilSetting, openTop,
+                null, false, Integer.MAX_VALUE);
+    }
+
+    public static BuildMaterialCounts estimate(
+            RegistryAccess registryAccess,
+            int sizeLeft, int sizeRight, int sizeHeight, int sizeDepth,
+            int placementAxisIndex,
+            int rodPattern, int coilIndex, int storedCoilSetting, boolean openTop,
+            @Nullable BiPredicate<Integer, Integer> websiteRodOverride,
+            boolean websiteClimbProfile) {
+        return estimate(registryAccess, sizeLeft, sizeRight, sizeHeight, sizeDepth,
+                placementAxisIndex, rodPattern, coilIndex, storedCoilSetting, openTop,
+                websiteRodOverride, websiteClimbProfile, Integer.MAX_VALUE);
+    }
+
+    public static BuildMaterialCounts estimate(
+            RegistryAccess registryAccess,
+            int sizeLeft, int sizeRight, int sizeHeight, int sizeDepth,
+            int placementAxisIndex,
+            int rodPattern, int coilIndex, int storedCoilSetting, boolean openTop,
+            @Nullable BiPredicate<Integer, Integer> websiteRodOverride,
+            boolean websiteClimbProfile,
+            int websiteBladeRingCap) {
 
         int w = sizeLeft + sizeRight + 1;
         int h = sizeHeight + 1;
@@ -44,7 +73,8 @@ public final class TurbineBuildMaterialCounter {
         TurbinePlacementAxis placement = TurbinePlacementAxis.fromIndex(placementAxisIndex);
         TurbineBuilderMetrics.Estimate plan = TurbineBuilderMetrics.fromShellSizes(
                 sizeLeft, sizeRight, sizeHeight, sizeDepth,
-                placementAxisIndex, storedCoilSetting, rodPattern, coilIndex);
+                placementAxisIndex, storedCoilSetting, rodPattern, coilIndex,
+                websiteRodOverride, websiteClimbProfile, websiteBladeRingCap);
 
         int rw = TurbineRodPatternLogic.rodSpaceWidth(w);
         int rd = TurbineRodPatternLogic.rodSpaceDepth(d);
@@ -73,8 +103,12 @@ public final class TurbineBuildMaterialCounter {
                 }
             }
         }
-        boolean skipRotor = TurbineRodPatternLogic.skipsRotorContents(rodPattern);
-        int rodControllers = skipRotor ? 0 : TurbineRodPatternLogic.rodColumns(rw, rd, rodPattern).size();
+        boolean hasWebsiteRods = rodPattern == TurbineRodPatternLogic.PATTERN_WEBSITE && websiteRodOverride != null;
+        boolean skipRotor = TurbineRodPatternLogic.skipsRotorContents(rodPattern) && !hasWebsiteRods;
+        // One controller per rod column (cancels missing-controller blade malus at runtime).
+        int rodControllers = skipRotor
+                ? 0
+                : TurbineRodPatternLogic.rodColumns(rw, rd, rodPattern, websiteRodOverride).size();
         int closureDeckCasings = Math.max(0, rw * rd - rodControllers);
 
         return new BuildMaterialCounts(

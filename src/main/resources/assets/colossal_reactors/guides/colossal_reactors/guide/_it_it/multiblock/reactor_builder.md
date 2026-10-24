@@ -28,13 +28,16 @@ Il **Reactor Builder** posiziona **interno e guscio** del reattore dai materiali
 
 1. **Posiziona** il builder contro l’impronta prevista (l’orientamento conta).
 2. **Apri** la GUI: imposta **dimensioni**, **pattern rod**, **modalità pattern**, tipo heat sink e **open top** se serve.
-3. **Anteprima** — bordo viola, posizioni rod gialle, rosso = blocchi non validi/in eccesso.
-4. **Mark input** — assegna gli slot del buffer a item specifici (vedi tooltip dei pulsanti).
+   - Pattern **Website**: incolla un **seed / URL** di design; celle heat sink / rod seguono il seed (anche heat sink misti per colonna). Su Website il tasto heat sink è inattivo.
+3. **Preview** (sotto Center) — bordo viola, posizioni rod gialle, rosso = blocchi non validi/in eccesso. Gli avvisi compaiono **accanto a Center**.
+4. **Mark Input** (appena sopra il buffer del builder):
+   - Assegna gli slot del buffer a item specifici (vedi tooltip dei pulsanti).
+   - **Trascina item da JEI** sugli slot del buffer per i ghost mark filter; doppio click su uno slot per azzerarlo.
 5. **Build** quando buffer/serbatoio hanno abbastanza materiali; **Stop** se compaiono zone rosse o devi modificare.
 6. **Rimuovi o ignora** il blocco builder — non fa parte del multiblocco.
 7. Aggiungi **a mano** [controller, power port e resource port](getting_started.md) dopo il build — controller **fuori** da una parete; porte sulla **stessa** faccia, sostituendo celle di **vetro**.
 
-La **simulazione** nel builder stima stats e conteggi materiali; **non** avvia il reattore reale.
+La **simulazione** stima stats e conteggi materiali (seed Website inclusi se validi); **non** avvia il reattore reale.
 
 <GameScene zoom="4" background="transparent">
   <ImportStructure src="/assets/assemblies/minimal_reactor_automation.snbt" />

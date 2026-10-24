@@ -58,11 +58,39 @@ public final class TurbineSimulation {
             int placementAxisIndex,
             int rodPattern, int coilIndex, int storedCoilSetting,
             @Nullable ResourceLocation generationId) {
+        return simulateFromBuilderParams(registryAccess, sizeLeft, sizeRight, sizeHeight, sizeDepth,
+                placementAxisIndex, rodPattern, coilIndex, storedCoilSetting, generationId,
+                null, false, Integer.MAX_VALUE);
+    }
+
+    public static SimulationResult simulateFromBuilderParams(
+            RegistryAccess registryAccess,
+            int sizeLeft, int sizeRight, int sizeHeight, int sizeDepth,
+            int placementAxisIndex,
+            int rodPattern, int coilIndex, int storedCoilSetting,
+            @Nullable ResourceLocation generationId,
+            @Nullable java.util.function.BiPredicate<Integer, Integer> websiteRodOverride,
+            boolean websiteClimbProfile) {
+        return simulateFromBuilderParams(registryAccess, sizeLeft, sizeRight, sizeHeight, sizeDepth,
+                placementAxisIndex, rodPattern, coilIndex, storedCoilSetting, generationId,
+                websiteRodOverride, websiteClimbProfile, Integer.MAX_VALUE);
+    }
+
+    public static SimulationResult simulateFromBuilderParams(
+            RegistryAccess registryAccess,
+            int sizeLeft, int sizeRight, int sizeHeight, int sizeDepth,
+            int placementAxisIndex,
+            int rodPattern, int coilIndex, int storedCoilSetting,
+            @Nullable ResourceLocation generationId,
+            @Nullable java.util.function.BiPredicate<Integer, Integer> websiteRodOverride,
+            boolean websiteClimbProfile,
+            int websiteBladeRingCap) {
 
         TurbineGenerationDefinition gen = generationForSimulation(registryAccess, generationId);
         TurbineProductionMath.ProductionEstimate production = TurbineProductionMath.fromBuilderParams(
                 sizeLeft, sizeRight, sizeHeight, sizeDepth,
-                placementAxisIndex, rodPattern, coilIndex, storedCoilSetting, gen);
+                placementAxisIndex, rodPattern, coilIndex, storedCoilSetting, gen,
+                websiteRodOverride, websiteClimbProfile, websiteBladeRingCap);
 
         if (Boolean.TRUE.equals(Config.TURBINE_SIMULATION_DEBUG.get())) {
             ColossalReactors.LOGGER.info(

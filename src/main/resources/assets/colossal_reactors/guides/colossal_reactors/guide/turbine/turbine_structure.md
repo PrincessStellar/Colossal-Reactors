@@ -27,18 +27,19 @@ categories:
 
 - Inside you need space for **rods and blades**, a **coil** section, **ports** on the walls, and one **Turbine Controller** on an outer **side wall** (north, south, east, or west—not the top or bottom of the box).
 
-## Rod controller
+## Rod controllers
 
 <ItemImage id="turbine_rod_controller" scale="4" />
 
-You need **exactly one** **Turbine Rod Controller** on the **top layer of the rotor section**. It sets which way the shaft runs (you can orient it in **six directions**, like a heating coil).
+Place **Turbine Rod Controller** blocks on the **closure deck**—the casing layer that separates the **rotor** (below) from the **coil zone** (above). They set which way the shaft runs (you can orient them in **six directions**, like a heating coil).
 
-- On an **odd × odd** rod footprint, it sits on the **center** cell.
-- If one side length is **even**, **two** center cells work; if **both** are even, **four** center cells work. Any of those is fine by hand; the **Turbine Builder** picks one center for you and highlights it in the preview.
+- You need **at least one**. You may place **one controller per rod column**, each sitting **directly on the deck cell above that column’s rod pile**.
+- All controllers must share the **same deck plane** and the **same facing**.
+- Controllers are **not** on the outer shell border.
 
-- Rod columns are laid out by your pattern in the volume **below** the coil section—they do not have to sit directly under this block.
+If any rod column has rods but **no** controller on its deck cell, blade efficiency takes a **−5%** penalty (see [Rods and blades](turbine_rod_and_blades.md)). Putting a controller on **every** rod column cancels that penalty.
 
-- Rods must line up with the controller’s axis. Wrong-facing rods are fixed when the turbine checks the build, when possible.
+- Rods must line up with the controller axis. Wrong-facing rods are fixed when the turbine checks the build, when possible.
 
 - This is **not** the **Turbine Controller** on the outside wall—that one opens the main turbine screen.
 
@@ -57,6 +58,7 @@ You need **exactly one** **Turbine Rod Controller** on the **top layer of the ro
 | Area | Where | What you put there |
 |------|--------|-------------------|
 | **Rotor** | Main interior, below the coils | Rods, blades |
+| **Closure deck** | Layer between rotor and coils | Casing + rod controllers above rod columns |
 | **Coils** | Top layers inside | Metal storage blocks (gold, copper, …) |
 | **Ports** | Casing faces | Steam in, RF out, redstone |
 

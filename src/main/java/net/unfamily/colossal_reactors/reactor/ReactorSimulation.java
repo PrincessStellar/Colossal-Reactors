@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.BiPredicate;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -945,6 +946,22 @@ public final class ReactorSimulation {
             int rodPattern, int patternMode, int heatSinkIndex,
             @Nullable ResourceLocation simulationFuelId,
             @Nullable CoolantDefinition coolantDef) {
+        return simulateFromBuilderParams(registryAccess, sizeLeft, sizeRight, sizeHeight, sizeDepth,
+                rodPattern, patternMode, heatSinkIndex, simulationFuelId, coolantDef, null, null);
+    }
+
+    /**
+     * Like {@link #simulateFromBuilderParams(RegistryAccess, int, int, int, int, int, int, int, ResourceLocation, CoolantDefinition)}
+     * with optional Website rod/heat-sink masks from a decoded design seed.
+     */
+    public static SimulationResult simulateFromBuilderParams(
+            RegistryAccess registryAccess,
+            int sizeLeft, int sizeRight, int sizeHeight, int sizeDepth,
+            int rodPattern, int patternMode, int heatSinkIndex,
+            @Nullable ResourceLocation simulationFuelId,
+            @Nullable CoolantDefinition coolantDef,
+            @Nullable BiPredicate<Integer, Integer> websiteRodOverride,
+            @Nullable BiPredicate<Integer, Integer> websiteHeatSinkCell) {
         int w = sizeLeft + sizeRight + 1;
         int h = sizeHeight + 1;
         int d = sizeDepth + 1;
@@ -962,7 +979,9 @@ public final class ReactorSimulation {
         for (int rx = 0; rx < rw; rx++) {
             for (int ry = 0; ry < rh; ry++) {
                 for (int rz = 0; rz < rd; rz++) {
-                    if (!RodPatternLogic.isRodForPreview(rx, ry, rz, rw, rh, rd, rodPattern, expansionRodAtCenter)) continue;
+                    if (!isSimRodForPreview(rx, ry, rz, rw, rh, rd, rodPattern, expansionRodAtCenter, websiteRodOverride)) {
+                        continue;
+                    }
                     rodSet.add(key(rx, ry, rz));
                     rodColumnSet.add(((long) rx << 8) | (rz & 0xFF));
                     rodCount++;
@@ -979,7 +998,14 @@ public final class ReactorSimulation {
                     for (int lz = 1; lz < d - 1; lz++) {
                         if (isSimInteriorCellRod(lx, ly, lz, w, h, d, insetXZ, rodSet)) continue;
                         boolean adjacentToRod;
-                        if (rodPattern == RodPatternLogic.PATTERN_CUSTOM) {
+                        if (rodPattern == RodPatternLogic.PATTERN_WEBSITE) {
+                            if (websiteHeatSinkCell == null) continue;
+                            if (!isSimInRodSpace(lx, ly, lz, w, h, d, insetXZ)) continue;
+                            int rx = lx - insetXZ;
+                            int rz = lz - insetXZ;
+                            if (!websiteHeatSinkCell.test(rx, rz)) continue;
+                            adjacentToRod = isSimInteriorCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rodSet);
+                        } else if (rodPattern == RodPatternLogic.PATTERN_CUSTOM) {
                             adjacentToRod = false;
                         } else if (patternMode == RodPatternLogic.MODE_SUPER_ECONOMY) {
                             if (!isSimInRodSpace(lx, ly, lz, w, h, d, insetXZ)) continue;
@@ -1155,6 +1181,18 @@ public final class ReactorSimulation {
     }
 
     /** True if interior cell (lx, ly, lz) is inside rod space (the -2 X/Z area). */
+    private static boolean isSimRodForPreview(
+            int rx, int ry, int rz, int rw, int rh, int rd,
+            int rodPattern, boolean expansionRodAtCenter,
+            @Nullable BiPredicate<Integer, Integer> websiteRodOverride) {
+        if (rw <= 0 || rh <= 0 || rd <= 0) return false;
+        if (rx < 0 || rx >= rw || ry < 0 || ry >= rh || rz < 0 || rz >= rd) return false;
+        if (rodPattern == RodPatternLogic.PATTERN_WEBSITE) {
+            return websiteRodOverride != null && websiteRodOverride.test(rx, rz);
+        }
+        return RodPatternLogic.isRodForPreview(rx, ry, rz, rw, rh, rd, rodPattern, expansionRodAtCenter);
+    }
+
     private static boolean isSimInRodSpace(int lx, int ly, int lz, int w, int h, int d, int insetXZ) {
         return lx >= insetXZ && lx < w - insetXZ && ly >= 1 && ly < h - 1 && lz >= insetXZ && lz < d - insetXZ;
     }

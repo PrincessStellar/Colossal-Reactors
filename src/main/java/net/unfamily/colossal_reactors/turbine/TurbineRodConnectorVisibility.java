@@ -3,7 +3,6 @@ package net.unfamily.colossal_reactors.turbine;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.BlockGetter;
-import net.unfamily.colossal_reactors.block.ModBlocks;
 
 /**
  * Which lateral connector sides on a turbine rod should be visible (at least one blade on that side).
@@ -18,7 +17,8 @@ public final class TurbineRodConnectorVisibility {
         // Only the adjacent block is required for connector visibility; avoid walking long rings
         // during client section meshing (RenderChunkRegion has a limited chunk window).
         for (Direction lateral : TurbineBladePlacement.lateralDirections(rodAxis)) {
-            if (TurbineBladePlacement.safeGetBlockState(level, rodPos.relative(lateral)).is(ModBlocks.TURBINE_BLADE.get())) {
+            if (TurbineBladePlacement.isOwnedBladeAlong(
+                    TurbineBladePlacement.safeGetBlockState(level, rodPos.relative(lateral)), lateral)) {
                 mask |= 1 << lateral.ordinal();
             }
         }

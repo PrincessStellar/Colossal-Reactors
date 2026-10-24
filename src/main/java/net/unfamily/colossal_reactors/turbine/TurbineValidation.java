@@ -28,7 +28,7 @@ public final class TurbineValidation {
         CONTROLLER_FACE_Y,
         TOO_LARGE,
         NO_ROD_CONTROLLER,
-        /** @deprecated Multiple aligned controllers are allowed; kept for old clients/messages. */
+        /** Kept for messages; multiple aligned controllers on the deck are allowed. */
         MULTIPLE_ROD_CONTROLLERS,
         ROD_CONTROLLER_NO_COLUMN,
         ROD_CONTROLLER_BORDER,
@@ -194,36 +194,14 @@ public final class TurbineValidation {
         }
 
         RegistryAccess registry = level.registryAccess();
-        RodControllerScan rodScan = scanRodControllers(level, minX, minY, minZ, maxX, maxY, maxZ);
-        report.rodControllersFound(rodScan.count);
-
-        if (rodScan.count == 0) {
-            return fail(FailureCode.NO_ROD_CONTROLLER, null, report.build());
-        }
-        if (rodScan.onBorder) {
-            return fail(FailureCode.ROD_CONTROLLER_BORDER, rodScan.lastPos, report.build());
-        }
-
-        Direction provisionalAxis = rodScan.axis;
-        if (provisionalAxis == null) {
-            return fail(FailureCode.ROD_CONTROLLER_FACING, rodScan.lastPos, report.build());
-        }
-
-        int coilLayersUsed = requestedCoilLayers >= 0
-                ? TurbineRodSpaceLayout.appliedCoilLayerCount(
-                interiorExtentAlong(provisionalAxis, width, height, length), requestedCoilLayers)
-                : inferCoilLayersFromStructure(level, minX, minY, minZ, maxX, maxY, maxZ, provisionalAxis, registry);
-
-        TurbineRotorLayout layout = TurbineRotorLayout.from(
-                minX, minY, minZ, maxX, maxY, maxZ, width, height, length, coilLayersUsed, provisionalAxis);
-        report.plane(layout.closureCoord(), layout.coilStartInterior(), layout.closureInteriorIndex(), coilLayersUsed);
-
         List<BlockPos> rodControllers = listRodControllers(level, minX, minY, minZ, maxX, maxY, maxZ);
         report.rodControllersFound(rodControllers.size());
         if (rodControllers.isEmpty()) {
             return fail(FailureCode.NO_ROD_CONTROLLER, null, report.build());
         }
-        Direction rotorAxis = provisionalAxis;
+
+        Direction rotorAxis = null;
+        Integer deckWorldCoord = null;
         for (BlockPos ctrlPos : rodControllers) {
             if (xOnBorder(ctrlPos, minX, maxX, minY, maxY, minZ, maxZ)) {
                 return fail(FailureCode.ROD_CONTROLLER_BORDER, ctrlPos, report.build());
@@ -233,9 +211,41 @@ public final class TurbineValidation {
                 return fail(FailureCode.ROD_CONTROLLER_FACING, ctrlPos, report.build());
             }
             Direction facing = ctrlState.getValue(TurbineRodControllerBlock.FACING);
-            if (facing.getAxis() != rotorAxis.getAxis()) {
+            if (rotorAxis == null) {
+                rotorAxis = facing;
+            } else if (facing.getAxis() != rotorAxis.getAxis()) {
+                return fail(FailureCode.ROD_CONTROLLER_AXIS_MISMATCH, ctrlPos, report.build());
+            } else if (facing != rotorAxis) {
+                // Same axis but opposite sense — pick the first; layout uses axis only via Direction.
+                // Still require consistent sense so growth matches rod FACING from builder.
                 return fail(FailureCode.ROD_CONTROLLER_AXIS_MISMATCH, ctrlPos, report.build());
             }
+            int axisCoord = worldAxisCoord(ctrlPos, facing);
+            if (deckWorldCoord == null) {
+                deckWorldCoord = axisCoord;
+            } else if (axisCoord != deckWorldCoord) {
+                // Controllers must share one closure-deck plane (above their rod piles).
+                return fail(FailureCode.ROD_CONTROLLER_NO_COLUMN, ctrlPos, report.build());
+            }
+        }
+
+        int interiorAlong = interiorExtentAlong(rotorAxis, width, height, length);
+        int coilLayersUsed;
+        if (requestedCoilLayers >= 0) {
+            coilLayersUsed = TurbineRodSpaceLayout.appliedCoilLayerCount(interiorAlong, requestedCoilLayers);
+        } else {
+            // Derive deck/coil split from where controllers actually sit — coil-block inference
+            // alone can place the virtual deck on the wrong layer when 2+ controllers are present.
+            coilLayersUsed = coilLayersFromControllerDeck(
+                    deckWorldCoord, rotorAxis, minX, minY, minZ, maxX, maxY, maxZ, interiorAlong);
+        }
+
+        TurbineRotorLayout layout = TurbineRotorLayout.from(
+                minX, minY, minZ, maxX, maxY, maxZ, width, height, length, coilLayersUsed, rotorAxis);
+        report.plane(layout.closureCoord(), layout.coilStartInterior(), layout.closureInteriorIndex(), coilLayersUsed);
+        report.growthAxis(rotorAxis);
+
+        for (BlockPos ctrlPos : rodControllers) {
             if (!layout.isClosureDeckWorld(ctrlPos.getX(), ctrlPos.getY(), ctrlPos.getZ())) {
                 return fail(FailureCode.ROD_CONTROLLER_NO_COLUMN, ctrlPos, report.build());
             }
@@ -244,18 +254,16 @@ public final class TurbineValidation {
             if (ca < 0 || cb < 0 || ca >= layout.crossSizeA() || cb >= layout.crossSizeB()) {
                 return fail(FailureCode.ROD_CONTROLLER_NO_COLUMN, ctrlPos, report.build());
             }
-            boolean hasRodBelow = false;
-            for (int layer = 0; layer < layout.closureInteriorIndex(); layer++) {
-                if (level.getBlockState(layout.rodPos(layer, ca, cb)).is(ModBlocks.TURBINE_ROD.get())) {
-                    hasRodBelow = true;
-                    break;
-                }
+            // Must sit directly on top of that column's rod pile (adjacent layer toward rotor floor).
+            int closureIdx = layout.closureInteriorIndex();
+            if (closureIdx <= 0) {
+                return fail(FailureCode.ROD_CONTROLLER_NO_COLUMN, ctrlPos, report.build());
             }
-            if (!hasRodBelow) {
+            BlockPos rodUnder = layout.rodPos(closureIdx - 1, ca, cb);
+            if (!level.getBlockState(rodUnder).is(ModBlocks.TURBINE_ROD.get())) {
                 return fail(FailureCode.ROD_CONTROLLER_NO_COLUMN, ctrlPos, report.build());
             }
         }
-        report.growthAxis(rotorAxis);
 
         int bladeCount = 0;
         int coilBlockCount = 0;
@@ -367,8 +375,70 @@ public final class TurbineValidation {
         };
     }
 
+    private static int worldAxisCoord(BlockPos pos, Direction growthAxis) {
+        return switch (growthAxis.getAxis()) {
+            case Y -> pos.getY();
+            case Z -> pos.getZ();
+            case X -> pos.getX();
+            default -> pos.getY();
+        };
+    }
+
+    /**
+     * Coil layers implied by rod controllers sitting on the closure deck at {@code deckWorldCoord}.
+     * Matches {@link TurbineRotorLayout#from} start/step so the virtual deck lands on those controllers.
+     */
+    private static int coilLayersFromControllerDeck(
+            int deckWorldCoord, Direction growthAxis,
+            int minX, int minY, int minZ, int maxX, int maxY, int maxZ,
+            int interiorAlong) {
+        int start;
+        int step;
+        switch (growthAxis) {
+            case UP -> {
+                start = minY + 1;
+                step = 1;
+            }
+            case DOWN -> {
+                start = maxY - 1;
+                step = -1;
+            }
+            case SOUTH -> {
+                start = minZ + 1;
+                step = 1;
+            }
+            case NORTH -> {
+                start = maxZ - 1;
+                step = -1;
+            }
+            case EAST -> {
+                start = minX + 1;
+                step = 1;
+            }
+            case WEST -> {
+                start = maxX - 1;
+                step = -1;
+            }
+            default -> {
+                start = minY + 1;
+                step = 1;
+            }
+        }
+        int closureIdx = step > 0
+                ? (deckWorldCoord - start) / step
+                : (start - deckWorldCoord) / (-step);
+        if (closureIdx < 0 || closureIdx >= interiorAlong) {
+            return TurbineRodSpaceLayout.appliedCoilLayerCount(
+                    interiorAlong, Config.TURBINE_DEFAULT_COIL_LAYER_COUNT.get());
+        }
+        // interiorAlong = rodLayers + 1 (deck) + coilLayers  →  coilLayers = interiorAlong - closureIdx - 1
+        int coils = interiorAlong - closureIdx - 1;
+        return TurbineRodSpaceLayout.coilLayerCount(interiorAlong, coils);
+    }
+
     /**
      * Infers coil layer count from blocks in the coil-cap region along the rotor axis.
+     * Prefer {@link #coilLayersFromControllerDeck} when rod controllers are present.
      */
     public static int inferCoilLayersFromStructure(
             Level level, int minX, int minY, int minZ, int maxX, int maxY, int maxZ,

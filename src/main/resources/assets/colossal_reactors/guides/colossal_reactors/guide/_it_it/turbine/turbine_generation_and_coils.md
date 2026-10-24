@@ -22,7 +22,7 @@ Quando la turbina è **formata correttamente** e **in funzione**, trasforma **va
 
 - La **coil strength** dipende da quali **blocchi di storage** riempiono la zona coil (oro, rame, netherite, ecc.—vedi sotto).
 
-- Il **bonus layout blade** dipende da come gli anelli si impilano in altezza—vedi [Rod e blade](turbine_rod_and_blades.md).
+- Il **bonus layout blade** dipende da come gli anelli si impilano in altezza—vedi [Rod e blade](turbine_rod_and_blades.md). Se qualche colonna rod non ha un rod controller sul deck di chiusura, quel bonus è anche ridotto del **−5%**.
 
 Le impostazioni del pack possono anche moltiplicare complessivamente uscita RF o uso vapore verso l’alto o il basso.
 

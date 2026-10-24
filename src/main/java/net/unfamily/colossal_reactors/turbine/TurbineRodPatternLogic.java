@@ -1,5 +1,7 @@
 package net.unfamily.colossal_reactors.turbine;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiPredicate;
@@ -101,6 +103,43 @@ public final class TurbineRodPatternLogic {
             }
         }
         return out;
+    }
+
+    /**
+     * Single rod-controller column for builder/preview: among {@link #rodColumns}, prefer the
+     * geometric primary center when it is a rod column, otherwise the closest rod column.
+     * Runtime validation still requires exactly one controller in the world.
+     */
+    @Nullable
+    public static TurbineRodControllerLayout.Center controllerColumn(
+            int rw, int rd, int pattern, BiPredicate<Integer, Integer> websiteOverride) {
+        List<TurbineRodControllerLayout.Center> columns = rodColumns(rw, rd, pattern, websiteOverride);
+        if (columns.isEmpty()) {
+            return null;
+        }
+        if (columns.size() == 1) {
+            return columns.getFirst();
+        }
+        TurbineRodControllerLayout.Center primary = TurbineRodControllerLayout.bestPrimaryCenter(rw, rd);
+        for (TurbineRodControllerLayout.Center c : columns) {
+            if (c.rx() == primary.rx() && c.rz() == primary.rz()) {
+                return primary;
+            }
+        }
+        float targetX = (rw - 1) / 2.0f;
+        float targetZ = (rd - 1) / 2.0f;
+        TurbineRodControllerLayout.Center best = columns.getFirst();
+        float bestDist = Float.MAX_VALUE;
+        for (TurbineRodControllerLayout.Center c : columns) {
+            float dx = c.rx() - targetX;
+            float dz = c.rz() - targetZ;
+            float dist = dx * dx + dz * dz;
+            if (dist < bestDist) {
+                bestDist = dist;
+                best = c;
+            }
+        }
+        return best;
     }
 
     /**

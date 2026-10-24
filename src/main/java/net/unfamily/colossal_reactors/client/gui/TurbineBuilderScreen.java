@@ -29,7 +29,10 @@ import net.unfamily.colossal_reactors.ColossalReactors;
 import net.unfamily.colossal_reactors.menu.TurbineBuilderMenu;
 import net.unfamily.colossal_reactors.turbine.ElecCoilLoader;
 import net.unfamily.colossal_reactors.network.TurbineBuilderBuildPayload;
+import net.unfamily.colossal_reactors.compat.jei.ghost.IColossalGhostTarget;
+import net.unfamily.colossal_reactors.network.BuilderMarkFilterSetPayload;
 import net.unfamily.colossal_reactors.network.TurbineBuilderMarkInputPayload;
+import net.minecraft.client.renderer.Rect2i;
 import net.unfamily.colossal_reactors.network.TurbineBuilderCoilPayload;
 import net.unfamily.colossal_reactors.network.TurbineBuilderOptionPayload;
 import net.unfamily.colossal_reactors.network.TurbineBuilderSimSettingsPayload;
@@ -52,12 +55,14 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BiPredicate;
 
 /**
  * Turbine Builder GUI. Background turbine_builder.png 230x250; simulation uses turbine_controller.png 230x240.
  * Like Deep Drawer Extractor: Simulation is a view mode (isSimulationView) on the same screen, not a separate Screen.
  */
-public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilderMenu> {
+public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilderMenu>
+        implements IColossalGhostTarget {
 
     private static final ResourceLocation BACKGROUND = ResourceLocation.fromNamespaceAndPath(
             ColossalReactors.MODID, "textures/gui/turbine_builder.png");
@@ -117,13 +122,22 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
     private static final int CENTER_BUTTON_Y = ROW2_Y + BUTTON_H + GAP;
     private static final int CENTER_BUTTON_W = ARROW_GROUP_WIDTH;
     private static final int CENTER_BUTTON_X = GROUP_LEFT_X;
-    private static final int MARK_INPUT_BUTTON_Y = CENTER_BUTTON_Y + BUTTON_H + GAP;
+    /** Must match {@link net.unfamily.colossal_reactors.menu.TurbineBuilderMenu} buffer Y. */
+    private static final int BUFFER_INV_Y = 102;
+    /** Mark Input + right row 1 sit above the buffer with a clear gap. */
+    private static final int MARK_INPUT_BUTTON_Y = BUFFER_INV_Y - BUTTON_H - GAP;
+    /**
+     * Warnings sit beside Center (same row), not under it.
+     */
+    private static final int STATUS_MESSAGE_X = CENTER_BUTTON_X + CENTER_BUTTON_W + GAP;
+    private static final int STATUS_MESSAGE_Y = CENTER_BUTTON_Y;
 
     /**
      * 6 buttons: 3 cols x 2 rows
      * (Pattern, Placement, Coil, OpenTop, Simulation, Build/Stop).
      * Coil is last of row 0 (editable on Website; rewrites mdct1).
-     * On Website, Placement (index 1) is hidden — Open Link occupies that slot.
+     * On Website, Placement (index 1) is hidden — Open Link occupies that slot;
+     * Placement moves to the ←/−/→ row (those size arrows are unused for seeds).
      */
     private static final int RIGHT_EDGE_INSET = 12;
     private static final int RIGHT_BUTTON_W = 42;
@@ -134,12 +148,13 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
     private static final int RIGHT_COL2_X = RIGHT_BLOCK_X + 2 * (RIGHT_BUTTON_W + GAP);
     private static final int RIGHT_ROW0_Y = ROW1_Y;
     private static final int RIGHT_ROW1_Y = MARK_INPUT_BUTTON_Y;
-    private static final int PREVIEW_BUTTON_Y = CENTER_BUTTON_Y;
-    private static final int PREVIEW_BUTTON_W = RIGHT_BUTTON_W;
-    private static final int PREVIEW_BUTTON_X = RIGHT_COL0_X;
-    private static final int COIL_LAYERS_BUTTON_X = RIGHT_COL1_X;
+    /** Preview under Center, same width as Center; Coil layers beside it (2 right-button widths). */
+    private static final int PREVIEW_BUTTON_Y = CENTER_BUTTON_Y + BUTTON_H + GAP;
+    private static final int PREVIEW_BUTTON_W = CENTER_BUTTON_W;
+    private static final int PREVIEW_BUTTON_X = CENTER_BUTTON_X;
+    private static final int COIL_LAYERS_BUTTON_X = PREVIEW_BUTTON_X + PREVIEW_BUTTON_W + GAP;
     private static final int COIL_LAYERS_BUTTON_Y = PREVIEW_BUTTON_Y;
-    private static final int COIL_LAYERS_BUTTON_W = RIGHT_BUTTON_W;
+    private static final int COIL_LAYERS_BUTTON_W = 2 * RIGHT_BUTTON_W + GAP;
     /** Over Placement (col1) so Coil can stay last of row 0 on Website. */
     private static final int OPEN_LINK_BUTTON_X = RIGHT_COL1_X;
     private static final int OPEN_LINK_BUTTON_Y = RIGHT_ROW0_Y;
@@ -148,7 +163,6 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
     private static final int DESIGN_EDIT_Y = ROW2_Y;
     private static final int DESIGN_EDIT_W = GUI_WIDTH - RIGHT_EDGE_INSET - DESIGN_EDIT_X;
     private static final int DESIGN_EDIT_H = BUTTON_H;
-    private static final int WARNING_RIGHT_X = RIGHT_BLOCK_X;
     private static final int BUILD_BUTTON_COL_X = RIGHT_COL2_X;
 
     private int buildPercentTextX(Component percentText) {
@@ -159,9 +173,9 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
         return RIGHT_ROW1_Y - lineHeight - GAP;
     }
 
-    /** Former build % Y (bottom of arrow row), after vertical swap with invalid-blocks warning. */
+    /** Invalid-blocks / website status share Center's row, starting beside Center. */
     private static int buildInvalidBlocksTextY(int lineHeight) {
-        return ROW2_Y + BUTTON_H - lineHeight;
+        return STATUS_MESSAGE_Y + (BUTTON_H - lineHeight) / 2;
     }
 
     /** Simulation view panel (same layout as reactor controller). */
@@ -204,6 +218,8 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
     private Button buttonOffsetLeft;
     private Button buttonOffsetRight;
     private Button buttonCenter;
+    /** Website only: placement axis where ←/−/→ sit in classic mode. */
+    private Button buttonWebsitePlacement;
     private Button buttonLeft;
     private Button buttonRight;
     private Button buttonDown;
@@ -214,6 +230,8 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
     private Button linkCopyButton;
     private Button linkBackButton;
     private Component websiteStatusMessage = Component.empty();
+    private int lastMarkClickSlotIndex = -1;
+    private long lastMarkClickTime;
     private boolean previewButtonShowsHide;
     private int lastPreviewSettingsHash;
     private Button buttonMarkInput;
@@ -264,12 +282,16 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
         buttonRight = Button.builder(Component.literal("\u2192"), b -> sendSize(2, true))  // → changes second value (R = sizeLeft)
                 .bounds(leftPos + BUTTON_RIGHT_X, topPos + ROW2_Y, BUTTON_W, BUTTON_H)
                 .build();
+        buttonWebsitePlacement = Button.builder(getPlacementAxisShortLabel(), b -> cyclePlacementAxis(true))
+                .bounds(leftPos + GROUP_LEFT_X, topPos + ROW2_Y, ARROW_GROUP_WIDTH, BUTTON_H)
+                .build();
         addRenderableWidget(buttonUp);
         addRenderableWidget(buttonOffsetLeft);
         addRenderableWidget(buttonOffsetRight);
         addRenderableWidget(buttonLeft);
         addRenderableWidget(buttonDown);
         addRenderableWidget(buttonRight);
+        addRenderableWidget(buttonWebsitePlacement);
 
         buttonCenter = Button.builder(Component.translatable("gui.colossal_reactors.builder.center"), b -> sendSize(6, true))
                 .bounds(leftPos + CENTER_BUTTON_X, topPos + CENTER_BUTTON_Y, CENTER_BUTTON_W, BUTTON_H)
@@ -301,6 +323,7 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
         designEditBox = new EditBox(font, leftPos + DESIGN_EDIT_X, topPos + DESIGN_EDIT_Y, DESIGN_EDIT_W, DESIGN_EDIT_H,
                 Component.translatable("gui.colossal_reactors.builder.website_design"));
         designEditBox.setMaxLength(512);
+        designEditBox.setTooltip(Tooltip.create(Component.translatable("gui.colossal_reactors.builder.website_design.tooltip")));
         designEditBox.setResponder(this::onDesignEdited);
         if (menu.getBlockEntity() != null) {
             String code = menu.getBlockEntity().getWebsiteDesign();
@@ -483,6 +506,21 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
         }
     }
 
+    private void pasteDesignFromClipboard() {
+        if (minecraft == null || designEditBox == null) {
+            return;
+        }
+        String clip = minecraft.keyboardHandler.getClipboard();
+        if (clip == null) {
+            return;
+        }
+        clip = clip.trim();
+        if (clip.isEmpty()) {
+            return;
+        }
+        designEditBox.setValue(clip);
+    }
+
     private void switchToWebsiteLinkView() {
         viewMode = ViewMode.WEBSITE_LINK;
         menu.setHideAllSlotsForSimulationView(true);
@@ -513,18 +551,22 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
         if (buttonOffsetLeft != null) buttonOffsetLeft.visible = showBuilder;
         if (buttonOffsetRight != null) buttonOffsetRight.visible = showBuilder;
         if (buttonCenter != null) buttonCenter.visible = showBuilder;
-        // Keep ←/−/→ visible in Website mode but inactive (size comes from the seed).
+        // Classic: ←/−/→ resize. Website: those slots become Placement (D-U…); size comes from the seed.
         if (buttonLeft != null) {
-            buttonLeft.visible = showBuilder;
+            buttonLeft.visible = showBuilder && !website;
             buttonLeft.active = showBuilder && !website;
         }
         if (buttonRight != null) {
-            buttonRight.visible = showBuilder;
+            buttonRight.visible = showBuilder && !website;
             buttonRight.active = showBuilder && !website;
         }
         if (buttonDown != null) {
-            buttonDown.visible = showBuilder;
+            buttonDown.visible = showBuilder && !website;
             buttonDown.active = showBuilder && !website;
+        }
+        if (buttonWebsitePlacement != null) {
+            buttonWebsitePlacement.visible = website;
+            buttonWebsitePlacement.active = website;
         }
         if (buttonPreview != null) buttonPreview.visible = showBuilder;
         if (buttonMarkInput != null) buttonMarkInput.visible = showBuilder;
@@ -645,6 +687,11 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
         PacketDistributor.sendToServer(new TurbineBuilderOptionPayload(menu.getBlockPos(), 2, next));
     }
 
+    private void cyclePlacementAxis(boolean next) {
+        if (menu.getBlockEntity() == null) return;
+        PacketDistributor.sendToServer(new TurbineBuilderOptionPayload(menu.getBlockPos(), 3, next));
+    }
+
     private boolean isWebsitePattern() {
         return menu.getRodPattern() == TurbineRodPatternLogic.PATTERN_WEBSITE;
     }
@@ -665,7 +712,7 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
         if (menu.getBlockEntity() == null) return;
         BlockPos pos = menu.getBlockPos();
         if (index == 0) PacketDistributor.sendToServer(new TurbineBuilderOptionPayload(pos, 1, true));  // Pattern
-        if (index == 1) PacketDistributor.sendToServer(new TurbineBuilderOptionPayload(pos, 3, true));  // Placement
+        if (index == 1) cyclePlacementAxis(true);
         if (index == 2) PacketDistributor.sendToServer(new TurbineBuilderCoilPayload(pos, true));  // Coil
         if (index == 3) PacketDistributor.sendToServer(new TurbineBuilderOptionPayload(pos, 0, true));  // OpenTop
         if (index == 5) {
@@ -690,9 +737,13 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
                         .append(Component.literal("\n"))
                         .append(Component.translatable("gui.colossal_reactors.turbine_builder.tooltip.coil_right"))));
         rightBlockButtons[0].setMessage(getRightButtonLabel(0));
-        // Button 1: Placement axis
+        // Button 1: Placement axis (classic right block; Website uses buttonWebsitePlacement)
         rightBlockButtons[1].setTooltip(Tooltip.create(getPlacementAxisTooltip()));
         rightBlockButtons[1].setMessage(getRightButtonLabel(1));
+        if (buttonWebsitePlacement != null) {
+            buttonWebsitePlacement.setMessage(getPlacementAxisShortLabel());
+            buttonWebsitePlacement.setTooltip(Tooltip.create(getPlacementAxisTooltip()));
+        }
         // Button 2: Coil (last of row 0; editable on Website)
         Component coilName = getCoilButtonLabel();
         rightBlockButtons[2].setMessage(coilName);
@@ -745,12 +796,48 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
     }
 
     @Override
+    public List<GhostDropTarget> getGhostDropTargets() {
+        if (viewMode != ViewMode.BUILDER || menu.getBlockEntity() == null) {
+            return List.of();
+        }
+        var pos = menu.getBlockEntity().getBlockPos();
+        List<GhostDropTarget> targets = new ArrayList<>();
+        for (int i = 0; i < TurbineBuilderMenu.BUFFER_SLOTS; i++) {
+            Slot slot = menu.getSlot(i);
+            if (!slot.isActive()) continue;
+            int slotIndex = i;
+            targets.add(new GhostDropTarget(
+                    new Rect2i(leftPos + slot.x - 1, topPos + slot.y - 1, 18, 18),
+                    stack -> PacketDistributor.sendToServer(
+                            new BuilderMarkFilterSetPayload(pos, slotIndex, stack.copyWithCount(1)))));
+        }
+        return targets;
+    }
+
+    @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (viewMode == ViewMode.SIMULATION && button == 0 && simulationScrollbar.mouseClicked(mouseX, mouseY, leftPos, topPos)) {
             return true;
         }
         int x = (int) mouseX;
         int y = (int) mouseY;
+        if (button == 2 && designEditBox != null && designEditBox.visible && isInWidget(x, y, designEditBox)) {
+            pasteDesignFromClipboard();
+            return true;
+        }
+        if (button == 0 && viewMode == ViewMode.BUILDER && !Screen.hasShiftDown() && hoveredSlot != null
+                && hoveredSlot.index >= 0 && hoveredSlot.index < TurbineBuilderMenu.BUFFER_SLOTS
+                && menu.getBlockEntity() != null) {
+            long now = System.currentTimeMillis();
+            boolean doubleClick = hoveredSlot.index == lastMarkClickSlotIndex && now - lastMarkClickTime <= 250L;
+            lastMarkClickSlotIndex = hoveredSlot.index;
+            lastMarkClickTime = now;
+            if (doubleClick && hoveredSlot.getItem().isEmpty() && menu.hasMarkInputFilter(hoveredSlot.index)) {
+                PacketDistributor.sendToServer(new BuilderMarkFilterSetPayload(
+                        menu.getBlockEntity().getBlockPos(), hoveredSlot.index, ItemStack.EMPTY));
+                return true;
+            }
+        }
         if (button == 1) {
             if (designEditBox != null && designEditBox.visible && isInWidget(x, y, designEditBox)) {
                 designEditBox.setValue("");
@@ -794,9 +881,13 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
                     PacketDistributor.sendToServer(new TurbineBuilderOptionPayload(menu.getBlockPos(), 1, false));  // Pattern
                 return true;
             }
+            if (buttonWebsitePlacement != null && buttonWebsitePlacement.visible
+                    && isInWidget(x, y, buttonWebsitePlacement)) {
+                cyclePlacementAxis(false);
+                return true;
+            }
             if (isInRightBlockButton(x, y, 1)) {
-                if (menu.getBlockEntity() != null)
-                    PacketDistributor.sendToServer(new TurbineBuilderOptionPayload(menu.getBlockPos(), 3, false));  // Placement
+                cyclePlacementAxis(false);
                 return true;
             }
             if (isInRightBlockButton(x, y, 2)) {
@@ -978,10 +1069,12 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
 
     private TurbineBuildMaterialCounter.BuildMaterialCounts getMaterialCounts() {
         var p = builderSimParams();
+        var masks = websiteSimMasks();
         return TurbineBuildMaterialCounter.estimate(
                 minecraft != null && minecraft.level != null ? minecraft.level.registryAccess() : net.minecraft.core.RegistryAccess.EMPTY,
                 p.sizeLeft(), p.sizeRight(), p.sizeHeight(), p.sizeDepth(),
-                p.placementAxisOrdinal(), p.rodPattern(), p.coilIndex(), p.coilLayerCount(), p.openTop());
+                p.placementAxisOrdinal(), p.rodPattern(), p.coilIndex(), p.coilLayerCount(), p.openTop(),
+                masks.rodOverride(), masks.climbProfile(), masks.bladeRingCap());
     }
 
     @Nullable
@@ -997,10 +1090,25 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
             return new TurbineSimulation.SimulationResult(0, 0, 0, 0, 0, 1, 1);
         }
         var p = builderSimParams();
+        var masks = websiteSimMasks();
         return TurbineBuilderSimulation.run(minecraft.level.registryAccess(),
                 p.sizeLeft(), p.sizeRight(), p.sizeHeight(), p.sizeDepth(),
                 p.placementAxisOrdinal(), p.rodPattern(), p.coilIndex(), p.coilLayerCount(),
-                getSelectedGenerationId());
+                getSelectedGenerationId(),
+                masks.rodOverride(), masks.climbProfile(), masks.bladeRingCap());
+    }
+
+    private record WebsiteSimMasks(
+            @Nullable BiPredicate<Integer, Integer> rodOverride,
+            boolean climbProfile,
+            int bladeRingCap) {}
+
+    private WebsiteSimMasks websiteSimMasks() {
+        var be = menu.getBlockEntity();
+        if (!isWebsitePattern() || be == null || !be.hasValidWebsiteDesign()) {
+            return new WebsiteSimMasks(null, false, Integer.MAX_VALUE);
+        }
+        return new WebsiteSimMasks(be::websiteIsRodColumn, be.isWebsiteClimbProfile(), be.getWebsiteBladeRingCap());
     }
 
     /** Same size/coil/pattern fields as {@link net.unfamily.colossal_reactors.blockentity.TurbineBuilderBlockEntity} build. */
@@ -1069,11 +1177,14 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
         if (menu.isInvalidBlocksDetected()) {
             guiGraphics.drawString(font,
                     Component.translatable("gui.colossal_reactors.turbine_builder.warning.invalid_blocks"),
-                    WARNING_RIGHT_X, buildInvalidBlocksTextY(font.lineHeight), 0xFF0000, false);
+                    STATUS_MESSAGE_X, buildInvalidBlocksTextY(font.lineHeight), 0xFF0000, false);
         }
         if (viewMode == ViewMode.BUILDER && !websiteStatusMessage.getString().isEmpty()) {
+            int statusY = menu.isInvalidBlocksDetected()
+                    ? STATUS_MESSAGE_Y + font.lineHeight + 1
+                    : buildInvalidBlocksTextY(font.lineHeight);
             guiGraphics.drawString(font, websiteStatusMessage,
-                    GROUP_LEFT_X, MARK_INPUT_BUTTON_Y + BUTTON_H + 2, GuiTextColors.ERROR, false);
+                    STATUS_MESSAGE_X, statusY, GuiTextColors.ERROR, false);
         }
     }
 

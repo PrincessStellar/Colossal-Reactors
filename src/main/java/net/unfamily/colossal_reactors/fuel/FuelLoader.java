@@ -78,7 +78,7 @@ public class FuelLoader {
         String output = ColossalReactors.MODID + ":nuclear_waste";
         ResourceLocation nuclearWasteId = ResourceLocation.fromNamespaceAndPath(ColossalReactors.MODID, "nuclear_waste");
         DEFINITIONS.put(uraniumId, new FuelDefinition(uraniumId, nuclearWasteId, FuelDefinition.SUBTYPE_ITEM_ITEM,
-                inputs, 1, output, 1, unitsPerFuel, unitsPerWaste, baseRf, baseFuelUnitsPerTick, true));
+                inputs, 1, output, 1, unitsPerFuel, unitsPerWaste, baseRf, baseFuelUnitsPerTick, true, 0x45c159));
 
         // Azurite: 500 base RF, 500 fuel units per ingot, 1500 waste units per 1 waste item
         ResourceLocation azuriteId = ResourceLocation.fromNamespaceAndPath(ColossalReactors.MODID, "azurite");
@@ -94,7 +94,8 @@ public class FuelLoader {
                 1500,
                 500.0,
                 baseFuelUnitsPerTick,
-                true
+                true,
+                0x53c6a5
         ));
     }
 

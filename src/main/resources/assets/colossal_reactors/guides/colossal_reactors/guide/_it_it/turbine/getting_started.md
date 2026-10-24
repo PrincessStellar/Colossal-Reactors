@@ -74,8 +74,8 @@ Vedi [Vapore, RF e coil](turbine_generation_and_coils.md) per il dettaglio. In b
 
 - **Approvvigionamento vapore** — limitato da conteggio blade e layout; più anelli bilanciati → più vapore/tick.
 - **Blocchi coil** — storage metallici nei **due strati interni superiori** (rame, oro, netherite, …). Le celle coil vuote contano come deboli (~30%); controlla JEI per i valori.
-- **Bonus altezza blade** — anelli che crescono verso il divisore guadagnano **+3%** per strato ascendente con più blade; anelli che si restringono perdono **−3%**. Contano i layout **Efficient** vs **Productive** — vedi [Rod e blade](turbine_rod_and_blades.md).
-- **Formazione valida** — guscio, coil, rod controller e porte devono validare prima che la generazione giri.
+- **Bonus altezza blade** — anelli che crescono verso il divisore guadagnano **+3%** per strato ascendente con più blade; anelli che si restringono perdono **−3%**. I build multi-colonna vogliono un **rod controller su ogni colonna** o prendono **−5%** — vedi [Rod e blade](turbine_rod_and_blades.md).
+- **Formazione valida** — guscio, coil, rod controller sul deck di chiusura e porte devono validare prima che la generazione giri.
 
 ## Setup 1: Energia semplice (vapore standalone)
 

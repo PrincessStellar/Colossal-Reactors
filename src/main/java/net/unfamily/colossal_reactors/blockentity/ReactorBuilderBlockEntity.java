@@ -357,6 +357,15 @@ public class ReactorBuilderBlockEntity extends BlockEntity implements MenuProvid
         return !getMarkInputFilter(slot).isEmpty();
     }
 
+    /** Sets one mark-input filter (empty stack clears). Used by JEI ghost drop / double-click clear. */
+    public void setMarkInputFilter(int slot, ItemStack stack) {
+        if (slot < 0 || slot >= markInputFilters.size()) {
+            return;
+        }
+        markInputFilters.set(slot, stack == null || stack.isEmpty() ? ItemStack.EMPTY : stack.copyWithCount(1));
+        setChanged();
+    }
+
     public IItemHandler getBufferHandler() {
         return bufferHandler;
     }

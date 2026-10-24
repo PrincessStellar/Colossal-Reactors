@@ -31,12 +31,13 @@ categories:
 
 <ItemImage id="turbine_rod_controller" scale="4" />
 
-Serve **esattamente uno** **Turbine Rod Controller** sullo **strato superiore della sezione rotore**. Imposta la direzione dell’albero (puoi orientarlo in **sei direzioni**, come una heating coil).
+Posiziona i blocchi **Turbine Rod Controller** sul **deck di chiusura**—lo strato di casing che separa il **rotore** (sotto) dalla **zona coil** (sopra). Impostano la direzione dell’albero (orientabili in **sei direzioni**, come una heating coil).
 
-- Su un’impronta rod **dispari × dispari**, sta sulla cella **centrale**.
-- Se un lato è **pari**, funzionano **due** celle centrali; se **entrambi** sono pari, funzionano **quattro** celle centrali. Qualsiasi di quelle va bene a mano; il **Turbine Builder** ne sceglie una al centro e la evidenzia nell’anteprima.
+- Ne serve **almeno uno**. Puoi metterne **uno per ogni colonna di rod**, ciascuno **direttamente sulla cella del deck sopra la pila di rod** di quella colonna.
+- Tutti i controller devono condividere lo **stesso piano del deck** e lo **stesso facing**.
+- I controller **non** stanno sul bordo esterno del guscio.
 
-- Le colonne rod sono disposte dal tuo pattern nel volume **sotto** la sezione coil—non devono stare direttamente sotto questo blocco.
+Se una colonna ha rod ma **non** ha un controller sulla sua cella del deck, l’efficienza blade prende una penalità **−5%** (vedi [Rod e blade](turbine_rod_and_blades.md)). Un controller su **ogni** colonna annulla quella penalità.
 
 - Le rod devono allinearsi con l’asse del controller. Le rod orientate male vengono corrette quando la turbina controlla il build, quando possibile.
 
@@ -57,6 +58,7 @@ Serve **esattamente uno** **Turbine Rod Controller** sullo **strato superiore de
 | Area | Dove | Cosa ci metti |
 |------|--------|-------------------|
 | **Rotore** | Interno principale, sotto i coil | Rod, blade |
+| **Deck di chiusura** | Strato tra rotore e coil | Casing + rod controller sopra le colonne rod |
 | **Coil** | Strati superiori interni | Blocchi di storage metallici (oro, rame, …) |
 | **Porte** | Facce casing | Vapore in, RF out, redstone |
 

@@ -28,13 +28,16 @@ The **Reactor Builder** places the **reactor interior and shell** from materials
 
 1. **Place** the builder against the intended footprint (orientation matters).
 2. **Open** the GUI: set **size**, **rod pattern**, **pattern mode**, heat sink type, and **open top** if needed.
-3. **Preview** — purple border, yellow rod positions, red = invalid/extra blocks.
-4. **Mark input** — assign buffer slots to specific items (see button tooltips).
+   - **Website** pattern: paste a design **seed / URL**; heat-sink / rod cells follow the seed (including mixed heat sinks per column). On Website, the heat-sink cycle button is inactive.
+3. **Preview** (under Center) — purple border, yellow rod positions, red = invalid/extra blocks. Status warnings appear **beside Center**.
+4. **Mark Input** (just above the builder buffer):
+   - Assign buffer slots to specific items (see button tooltips).
+   - **Drag items from JEI** onto buffer slots for ghost mark filters; double-click a slot to clear.
 5. **Build** when the buffer/tank hold enough materials; **Stop** if red zones appear or you need to edit.
 6. **Remove or ignore** the builder block — it is not part of the multiblock.
 7. **Manually** add [controller, power port, and resource port(s)](getting_started.md) after the build — controller **outside** one wall; ports on that **same** face, replacing **glass** cells.
 
-**Simulation** in the builder estimates stats and material counts; it does **not** start the real reactor.
+**Simulation** estimates stats and material counts (Website seeds included when valid); it does **not** start the real reactor.
 
 <GameScene zoom="4" background="transparent">
   <ImportStructure src="/assets/assemblies/minimal_reactor_automation.snbt" />

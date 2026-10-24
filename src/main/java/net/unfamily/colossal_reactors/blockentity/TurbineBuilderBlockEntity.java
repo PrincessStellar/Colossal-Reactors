@@ -197,6 +197,8 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
     @Nullable
     private transient boolean[] websiteRodMaskCache;
     private transient boolean websiteClimbProfile;
+    /** Cached {@code mdct1} ring cap; {@link Integer#MAX_VALUE} when no valid website design. */
+    private transient int websiteBladeRing = Integer.MAX_VALUE;
     private transient int websiteCacheW = -1;
     private transient int websiteCacheD = -1;
     // Build progress cursors (NEXT position to process). These make building "forward-only" and avoid rescanning from start.
@@ -366,6 +368,15 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
         return !getMarkInputFilter(slot).isEmpty();
     }
 
+    /** Sets one mark-input filter (empty stack clears). Used by JEI ghost drop / double-click clear. */
+    public void setMarkInputFilter(int slot, ItemStack stack) {
+        if (slot < 0 || slot >= markInputFilters.size()) {
+            return;
+        }
+        markInputFilters.set(slot, stack == null || stack.isEmpty() ? ItemStack.EMPTY : stack.copyWithCount(1));
+        setChanged();
+    }
+
     public IItemHandler getBufferHandler() {
         return bufferHandler;
     }
@@ -469,6 +480,15 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
         return websiteClimbProfile;
     }
 
+    /**
+     * Blade ring cap from the website design ({@code mdct1} ring field).
+     * {@link Integer#MAX_VALUE} when no valid website design is loaded.
+     */
+    public int getWebsiteBladeRingCap() {
+        ensureWebsiteRodCache();
+        return websiteRodMaskCache != null ? websiteBladeRing : Integer.MAX_VALUE;
+    }
+
     public boolean websiteIsRodColumn(int rx, int rz) {
         ensureWebsiteRodCache();
         if (websiteRodMaskCache == null) {
@@ -505,6 +525,7 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
     private void refreshWebsiteRodCache(ModDecodedTurbineDesign design) {
         websiteRodMaskCache = design.rodMask().clone();
         websiteClimbProfile = design.climbProfile();
+        websiteBladeRing = Math.max(0, design.ring());
         websiteCacheW = design.exteriorX();
         websiteCacheD = design.exteriorZ();
     }
@@ -512,6 +533,7 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
     private void invalidateWebsiteRodCache() {
         websiteRodMaskCache = null;
         websiteClimbProfile = false;
+        websiteBladeRing = Integer.MAX_VALUE;
         websiteCacheW = -1;
         websiteCacheD = -1;
     }

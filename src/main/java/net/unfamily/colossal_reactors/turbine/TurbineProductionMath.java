@@ -52,9 +52,39 @@ public final class TurbineProductionMath {
             int coilIndex,
             int storedCoilSetting,
             @Nullable TurbineGenerationDefinition generation) {
+        return fromBuilderParams(sizeLeft, sizeRight, sizeHeight, sizeDepth,
+                placementAxisIndex, rodPattern, coilIndex, storedCoilSetting, generation,
+                null, false, Integer.MAX_VALUE);
+    }
+
+    public static ProductionEstimate fromBuilderParams(
+            int sizeLeft, int sizeRight, int sizeHeight, int sizeDepth,
+            int placementAxisIndex,
+            int rodPattern,
+            int coilIndex,
+            int storedCoilSetting,
+            @Nullable TurbineGenerationDefinition generation,
+            @Nullable java.util.function.BiPredicate<Integer, Integer> websiteRodOverride,
+            boolean websiteClimbProfile) {
+        return fromBuilderParams(sizeLeft, sizeRight, sizeHeight, sizeDepth,
+                placementAxisIndex, rodPattern, coilIndex, storedCoilSetting, generation,
+                websiteRodOverride, websiteClimbProfile, Integer.MAX_VALUE);
+    }
+
+    public static ProductionEstimate fromBuilderParams(
+            int sizeLeft, int sizeRight, int sizeHeight, int sizeDepth,
+            int placementAxisIndex,
+            int rodPattern,
+            int coilIndex,
+            int storedCoilSetting,
+            @Nullable TurbineGenerationDefinition generation,
+            @Nullable java.util.function.BiPredicate<Integer, Integer> websiteRodOverride,
+            boolean websiteClimbProfile,
+            int websiteBladeRingCap) {
         TurbineBuilderMetrics.IdealBuildMetrics ideal = TurbineBuilderMetrics.idealBuildMetrics(
                 sizeLeft, sizeRight, sizeHeight, sizeDepth,
-                placementAxisIndex, storedCoilSetting, rodPattern, coilIndex);
+                placementAxisIndex, storedCoilSetting, rodPattern, coilIndex,
+                websiteRodOverride, websiteClimbProfile, websiteBladeRingCap);
         TurbineGenerationDefinition gen = generation != null ? generation : TurbineGenerationLoader.getDefault();
         return compute(
                 ideal.bladeCount(),

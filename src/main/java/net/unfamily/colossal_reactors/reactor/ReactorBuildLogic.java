@@ -12,6 +12,7 @@ import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 import net.unfamily.colossal_reactors.block.ModBlocks;
+import net.unfamily.colossal_reactors.builder.web.BuilderWebsiteDesigns;
 import net.unfamily.colossal_reactors.tags.ModBlockTags;
 import net.unfamily.colossal_reactors.block.ReactorBuilderBlock;
 import net.unfamily.colossal_reactors.blockentity.ReactorBuilderBlockEntity;
@@ -228,8 +229,7 @@ public final class ReactorBuildLogic {
                 continue;
             }
             if (stage == STAGE_LIQUIDS) {
-                if (pattern == RodPatternLogic.PATTERN_NONE
-                        || !HeatSinkLoader.requiresLiquidPlacement(builder.getSelectedHeatSinkIndex())) {
+                if (pattern == RodPatternLogic.PATTERN_NONE || !needsLiquidHeatSinkStage(builder, pattern)) {
                     builder.setBuildStage(STAGE_HEAT_SINKS);
                     builder.setBuildHeatCursor(Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE);
                     builder.setChanged();
@@ -395,10 +395,15 @@ public final class ReactorBuildLogic {
                 for (int lz = lzStart; lz < d - 1; lz++) {
                     builder.setBuildLiquidCursor(lx, ly, lz + 1);
                     if (isInteriorCellRod(builder, lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) continue;
+                    int heatSinkOption = heatSinkOptionForInteriorCell(builder, pattern, lx, lz, insetXZ, w, d);
+                    if (heatSinkOption <= 0) continue;
                     if (pattern == RodPatternLogic.PATTERN_WEBSITE) {
                         int rx = lx - insetXZ, rz = lz - insetXZ;
                         if (lx < insetXZ || lx >= w - insetXZ || lz < insetXZ || lz >= d - insetXZ
                                 || isWebsiteAirCell(builder, pattern, rx, rz)) {
+                            continue;
+                        }
+                        if (!HeatSinkLoader.requiresLiquidPlacement(heatSinkOption)) {
                             continue;
                         }
                     } else if (pattern != RodPatternLogic.PATTERN_CUSTOM) {
@@ -408,7 +413,7 @@ public final class ReactorBuildLogic {
                     }
                     Fluid fluid = builder.getFluidTank().getFluid().getFluid();
                     if (fluid == null || fluid == Fluids.EMPTY
-                            || !HeatSinkLoader.isFluidMatchingSelectedHeatSink(level.registryAccess(), builder.getSelectedHeatSinkIndex(), fluid)) {
+                            || !HeatSinkLoader.isFluidMatchingSelectedHeatSink(level.registryAccess(), heatSinkOption, fluid)) {
                         builder.setBuildLiquidCursor(lx, ly, lz);
                         return true;
                     }
@@ -441,7 +446,7 @@ public final class ReactorBuildLogic {
                                          int w, int h, int d,
                                          int insetXZ, int rw, int rh, int rd, int pattern, boolean expansionRodAtCenter) {
         int patternMode = builder.getPatternMode();
-        if (HeatSinkLoader.shouldSkipSolidHeatSinkAutoPlacement(builder.getSelectedHeatSinkIndex())) return false;
+        if (!needsSolidHeatSinkStage(builder, pattern)) return false;
 
         int ly0 = builder.getBuildHeatLy();
         int lx0 = builder.getBuildHeatLx();
@@ -456,10 +461,16 @@ public final class ReactorBuildLogic {
                 for (int lz = lzStart; lz < d - 1; lz++) {
                     builder.setBuildHeatCursor(lx, ly, lz + 1);
                     if (isInteriorCellRod(builder, lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) continue;
+                    int heatSinkOption = heatSinkOptionForInteriorCell(builder, pattern, lx, lz, insetXZ, w, d);
+                    if (heatSinkOption <= 0) continue;
                     if (pattern == RodPatternLogic.PATTERN_WEBSITE) {
                         int rx = lx - insetXZ, rz = lz - insetXZ;
                         if (lx < insetXZ || lx >= w - insetXZ || lz < insetXZ || lz >= d - insetXZ
                                 || isWebsiteAirCell(builder, pattern, rx, rz)) {
+                            continue;
+                        }
+                        if (HeatSinkLoader.requiresLiquidPlacement(heatSinkOption)
+                                || HeatSinkLoader.shouldSkipSolidHeatSinkAutoPlacement(heatSinkOption)) {
                             continue;
                         }
                     } else if (pattern != RodPatternLogic.PATTERN_CUSTOM) {
@@ -469,12 +480,12 @@ public final class ReactorBuildLogic {
                     }
                     BlockPos pos = new BlockPos(minX + lx, minY + ly, minZ + lz);
                     if (!canReplaceForSolidBlock(level, pos)) continue;
-                    ItemStack heatSink = findHeatSinkBlock(builder);
+                    ItemStack heatSink = findHeatSinkBlock(builder, heatSinkOption);
                     if (heatSink.isEmpty()) {
                         builder.setBuildHeatCursor(lx, ly, lz);
                         return true;
                     }
-                    if (tryPlaceHeatSink(builder, level, pos, heatSink)) return true;
+                    if (tryPlaceHeatSink(builder, level, pos, heatSink, heatSinkOption)) return true;
                 }
                 builder.setBuildHeatCursor(lx + 1, ly, 1);
             }
@@ -652,32 +663,84 @@ public final class ReactorBuildLogic {
         return true;
     }
 
-    private static ItemStack findHeatSinkBlock(ReactorBuilderBlockEntity builder) {
-        int idx = builder.getSelectedHeatSinkIndex();
-        if (idx <= 0) return ItemStack.EMPTY;
+    private static ItemStack findHeatSinkBlock(ReactorBuilderBlockEntity builder, int heatSinkOption) {
+        if (heatSinkOption <= 0) return ItemStack.EMPTY;
         if (builder.getLevel() == null) return ItemStack.EMPTY;
-        var defs = HeatSinkLoader.getAllDefinitions();
-        int defIdx = idx - 1;
-        if (defIdx >= defs.size()) return ItemStack.EMPTY;
         var registryAccess = builder.getLevel().registryAccess();
         for (int i = 0; i < builder.getBufferHandler().getSlots(); i++) {
             ItemStack stack = builder.getBufferHandler().getStackInSlot(i);
             if (stack.isEmpty()) continue;
             Block block = Block.byItem(stack.getItem());
-            if (block != Blocks.AIR && HeatSinkLoader.isBlockMatchingSelectedHeatSink(block.defaultBlockState(), idx, registryAccess))
+            if (block != Blocks.AIR && HeatSinkLoader.isBlockMatchingSelectedHeatSink(block.defaultBlockState(), heatSinkOption, registryAccess))
                 return stack;
         }
         return ItemStack.EMPTY;
     }
 
-    private static boolean tryPlaceHeatSink(ReactorBuilderBlockEntity builder, ServerLevel level, BlockPos pos, ItemStack stack) {
-        int idx = builder.getSelectedHeatSinkIndex();
+    private static boolean tryPlaceHeatSink(ReactorBuilderBlockEntity builder, ServerLevel level, BlockPos pos,
+                                            ItemStack stack, int heatSinkOption) {
         Block block = Block.byItem(stack.getItem());
         if (block == Blocks.AIR) return false;
-        if (!HeatSinkLoader.isBlockMatchingSelectedHeatSink(block.defaultBlockState(), idx, level.registryAccess())) return false;
+        if (!HeatSinkLoader.isBlockMatchingSelectedHeatSink(block.defaultBlockState(), heatSinkOption, level.registryAccess())) return false;
         level.setBlock(pos, block.defaultBlockState(), 3);
         consumeOne(builder, stack);
         return true;
+    }
+
+    /** True when liquid heat-sink stage should run (selected option, or any Website cell that needs liquid). */
+    private static boolean needsLiquidHeatSinkStage(ReactorBuilderBlockEntity builder, int pattern) {
+        if (pattern == RodPatternLogic.PATTERN_WEBSITE && builder.hasValidWebsiteDesign()) {
+            return websiteHasHeatSinkKind(builder, true);
+        }
+        return HeatSinkLoader.requiresLiquidPlacement(builder.getSelectedHeatSinkIndex());
+    }
+
+    /** True when solid heat-sink stage should run (selected option, or any Website cell that needs a solid block). */
+    private static boolean needsSolidHeatSinkStage(ReactorBuilderBlockEntity builder, int pattern) {
+        if (pattern == RodPatternLogic.PATTERN_WEBSITE && builder.hasValidWebsiteDesign()) {
+            return websiteHasHeatSinkKind(builder, false);
+        }
+        return !HeatSinkLoader.shouldSkipSolidHeatSinkAutoPlacement(builder.getSelectedHeatSinkIndex());
+    }
+
+    private static boolean websiteHasHeatSinkKind(ReactorBuilderBlockEntity builder, boolean liquid) {
+        int w = builder.getSizeLeft() + builder.getSizeRight() + 1;
+        int d = builder.getSizeDepth() + 1;
+        int insetXZ = RodPatternLogic.rodSpaceInsetXZ(builder.getPatternMode());
+        int iw = Math.max(0, w - 2 * insetXZ);
+        int id = Math.max(0, d - 2 * insetXZ);
+        for (int rx = 0; rx < iw; rx++) {
+            for (int rz = 0; rz < id; rz++) {
+                String cell = builder.getWebsiteCell(rx, rz);
+                if (cell == null || "air".equals(cell) || "rod".equals(cell)) continue;
+                int opt = BuilderWebsiteDesigns.findHeatSinkOptionIndex(cell);
+                if (opt <= 0) continue;
+                boolean cellLiquid = HeatSinkLoader.requiresLiquidPlacement(opt);
+                if (liquid ? cellLiquid : !cellLiquid && !HeatSinkLoader.shouldSkipSolidHeatSinkAutoPlacement(opt)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Heat-sink builder option for an interior local cell. Website uses the seed cell id (hybrid layouts);
+     * other patterns use the single selected option.
+     */
+    private static int heatSinkOptionForInteriorCell(ReactorBuilderBlockEntity builder, int pattern,
+                                                     int lx, int lz, int insetXZ, int w, int d) {
+        if (pattern == RodPatternLogic.PATTERN_WEBSITE && builder.hasValidWebsiteDesign()) {
+            if (lx < insetXZ || lx >= w - insetXZ || lz < insetXZ || lz >= d - insetXZ) {
+                return 0;
+            }
+            String cell = builder.getWebsiteCell(lx - insetXZ, lz - insetXZ);
+            if (cell == null || "air".equals(cell) || "rod".equals(cell)) {
+                return 0;
+            }
+            return BuilderWebsiteDesigns.findHeatSinkOptionIndex(cell);
+        }
+        return builder.getSelectedHeatSinkIndex();
     }
 
     private static void consumeOne(ReactorBuilderBlockEntity builder, ItemStack stack) {
@@ -705,9 +768,19 @@ public final class ReactorBuildLogic {
     }
 
     private static long estimateTotalWork(ReactorBuilderBlockEntity builder) {
+        java.util.function.BiPredicate<Integer, Integer> rodOverride = null;
+        java.util.function.BiPredicate<Integer, Integer> heatSinkCell = null;
+        if (builder.getRodPattern() == RodPatternLogic.PATTERN_WEBSITE && builder.hasValidWebsiteDesign()) {
+            rodOverride = builder::websiteIsRodColumn;
+            heatSinkCell = (rx, rz) -> {
+                String cell = builder.getWebsiteCell(rx, rz);
+                return cell != null && !"air".equals(cell) && !"rod".equals(cell);
+            };
+        }
         ReactorBuildMaterialCounter.BuildMaterialCounts counts = ReactorBuildMaterialCounter.estimate(
                 builder.getSizeLeft(), builder.getSizeRight(), builder.getSizeHeight(), builder.getSizeDepth(),
-                builder.getRodPattern(), builder.getPatternMode(), builder.getSelectedHeatSinkIndex(), builder.isOpenTop());
+                builder.getRodPattern(), builder.getPatternMode(), builder.getSelectedHeatSinkIndex(), builder.isOpenTop(),
+                rodOverride, heatSinkCell);
         long total = counts.frameCasings() + counts.faceCasings() + counts.rodControllers() + counts.rods();
         int heatSinkIndex = builder.getSelectedHeatSinkIndex();
         if (HeatSinkLoader.requiresLiquidPlacement(heatSinkIndex)) {

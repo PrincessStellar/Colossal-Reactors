@@ -463,7 +463,7 @@
   "message.colossal_reactors.turbine_invalid.controller_face_y": "Invalid: turbine controller must be on a side wall (N/S/E/W), not top or bottom",
   "message.colossal_reactors.turbine_invalid.too_large": "Invalid: turbine too large (%s x %s x %s)",
   "message.colossal_reactors.turbine_invalid.no_rod_controller": "Invalid: missing turbine rod controller or coil/rod partition wall incomplete or wrong",
-  "message.colossal_reactors.turbine_invalid.multiple_rod_controllers": "Invalid: rod controllers found (%s) — each must align with a rod column",
+  "message.colossal_reactors.turbine_invalid.multiple_rod_controllers": "Invalid: rod controllers found (%s) — each must sit on the deck above a rod column",
   "message.colossal_reactors.turbine_invalid.rod_controller_border": "Invalid: rod controller must be inside, not on shell",
   "message.colossal_reactors.turbine_invalid.rod_controller_facing": "Invalid: rod controller has no facing",
   "message.colossal_reactors.turbine_invalid.shell_gap": "Invalid: shell incomplete or wrong block on border",

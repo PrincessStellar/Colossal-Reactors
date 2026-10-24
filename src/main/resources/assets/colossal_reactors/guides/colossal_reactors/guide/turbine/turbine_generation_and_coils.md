@@ -22,7 +22,7 @@ When the turbine is **formed correctly** and **running**, it turns **steam** int
 
 - **Coil strength** depends on which **storage blocks** fill the coil zone (gold, copper, netherite, and so on—see below).
 
-- **Blade layout bonus** depends on how rings stack by height—see [Rods and blades](turbine_rod_and_blades.md).
+- **Blade layout bonus** depends on how rings stack by height—see [Rods and blades](turbine_rod_and_blades.md). If any rod column lacks a rod controller on the closure deck, that bonus is also cut by **−5%**.
 
 Pack settings can also multiply overall RF output or steam use up or down.
 

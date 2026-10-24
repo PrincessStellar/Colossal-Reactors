@@ -9,8 +9,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.unfamily.colossal_reactors.ColossalReactors;
@@ -46,20 +44,10 @@ public record TurbineBuilderMarkInputPayload(BlockPos pos, int mode) implements 
             ServerLevel level = player.serverLevel();
             TurbineBuilderBlockEntity builder = resolveBuilderForMarkInput(player, level, packet.pos());
             if (builder == null) return;
-            BlockPos at = builder.getBlockPos();
             switch (packet.mode()) {
-                case MODE_NORMAL -> {
-                    builder.applyMarkInputFromBuffer();
-                    level.playSound(null, at, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.3f, 1.0f);
-                }
-                case MODE_SHIFT -> {
-                    builder.clearAllMarkInputFilters();
-                    level.playSound(null, at, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.3f, 0.8f);
-                }
-                case MODE_CTRL -> {
-                    builder.clearMarkInputFiltersWithoutMatchingStacks();
-                    level.playSound(null, at, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.3f, 0.9f);
-                }
+                case MODE_NORMAL -> builder.applyMarkInputFromBuffer();
+                case MODE_SHIFT -> builder.clearAllMarkInputFilters();
+                case MODE_CTRL -> builder.clearMarkInputFiltersWithoutMatchingStacks();
                 default -> {}
             }
             builder.setChanged();

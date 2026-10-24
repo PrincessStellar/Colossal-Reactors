@@ -50,11 +50,20 @@ Per il bonus migliore, aggiungi anelli **dal basso verso l’alto** (il layout *
 
 Su alcuni pack, solo gli **anelli pari** (4, 8, 12 blade su uno strato, ecc.) contano pienamente verso la capacità vapore—controlla la config del mod se i numeri sembrano bassi.
 
+## Penalità rod controller mancante
+
+Se la turbina ha **una qualsiasi colonna di rod** la cui cella sul deck di chiusura **non** è un [Turbine Rod Controller](turbine_structure.md), l’efficienza blade è moltiplicata per **0,95 (−5%)**.
+
+- Un solo controller su un albero singolo: nessuna penalità.
+- Layout multi-colonna (**Hyperflow**, seed Website, build a mano): metti un controller su **ogni colonna** per annullare il −5%.
+
 ## Layout del builder
 
-Il [Turbine Builder](turbine_builder.md) può posizionare rod e blade per te:
+Il [Turbine Builder](turbine_builder.md) può posizionare rod, blade e rod controller per te:
 
-- **Efficient** — rod a scacchiera; gli anelli blade crescono più alti passo dopo passo (meglio per il bonus altezza).
-- **Productive** — rod ovunque consentito; ogni strato ottiene subito il conteggio anello massimo.
+- **Efficient** — una colonna rod centrale; gli anelli blade **salgono** strato per strato (miglior bonus altezza).
+- **Productive** — stessa colonna singola; ogni strato ottiene subito il **massimo** di anelli.
+- **Hyperflow** — griglia multi-rod (con margine di una cella dalle pareti); il builder mette un **rod controller su ogni colonna**.
+- **Website** — rod da un seed di design importato; la crescita blade segue salita/pieno come Efficient/Productive.
 
 Posizionare le blade a mano con l’item segue lo stesso ordine di anelli del builder.
