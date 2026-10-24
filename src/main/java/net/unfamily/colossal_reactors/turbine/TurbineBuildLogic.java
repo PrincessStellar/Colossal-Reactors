@@ -17,6 +17,8 @@ import net.unfamily.colossal_reactors.item.ModItems;
 import net.unfamily.colossal_reactors.tags.ModBlockTags;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
+
 /**
  * Server-side turbine build: frame, closure deck, rod controller, rods, blades, optional coil blocks.
  */
@@ -101,21 +103,21 @@ public final class TurbineBuildLogic {
             case STAGE_FRAME -> tickFrame(level, builder, b, openTop);
             case STAGE_CLOSURE_DECK -> tickClosureDeck(level, builder, b);
             case STAGE_ROD_CONTROLLERS -> {
-                if (TurbineRodPatternLogic.skipsRotorContents(pattern)) {
+                if (skipsRotorContents(builder, pattern)) {
                     builder.setBuildStage(TurbineRodPatternLogic.skipsCoils(pattern) ? STAGE_DONE : STAGE_COILS);
                     yield builder.getBuildStage() != STAGE_DONE;
                 }
                 yield tickRodControllers(level, builder, b);
             }
             case STAGE_RODS -> {
-                if (TurbineRodPatternLogic.skipsRotorContents(pattern)) {
+                if (skipsRotorContents(builder, pattern)) {
                     builder.setBuildStage(TurbineRodPatternLogic.skipsCoils(pattern) ? STAGE_DONE : STAGE_COILS);
                     yield builder.getBuildStage() != STAGE_DONE;
                 }
                 yield tickRods(level, builder, b);
             }
             case STAGE_BLADES -> {
-                if (TurbineRodPatternLogic.skipsRotorContents(pattern)) {
+                if (skipsRotorContents(builder, pattern)) {
                     builder.setBuildStage(TurbineRodPatternLogic.skipsCoils(pattern) ? STAGE_DONE : STAGE_COILS);
                     yield builder.getBuildStage() != STAGE_DONE;
                 }
@@ -191,7 +193,6 @@ public final class TurbineBuildLogic {
     /** Casing deck separating rotor from coil zone; rod-controller cells stay air. */
     private static boolean tickClosureDeck(ServerLevel level, TurbineBuilderBlockEntity builder, BuildBounds b) {
         TurbineRotorLayout layout = b.layout;
-        TurbineRodControllerLayout.Center center = layout.primaryCenter();
         int closure = layout.closureCoord();
         int x0 = builder.getBuildFrameX();
         int y0 = builder.getBuildFrameY();
@@ -202,9 +203,9 @@ public final class TurbineBuildLogic {
             z0 = b.minZ + 1;
         }
         return switch (layout.growthAxis().getAxis()) {
-            case Y -> tickClosureDeckY(level, builder, b, layout, center, closure, x0, z0);
-            case Z -> tickClosureDeckZ(level, builder, b, layout, center, closure, x0, y0);
-            case X -> tickClosureDeckX(level, builder, b, layout, center, closure, y0, z0);
+            case Y -> tickClosureDeckY(level, builder, b, layout, closure, x0, z0);
+            case Z -> tickClosureDeckZ(level, builder, b, layout, closure, x0, y0);
+            case X -> tickClosureDeckX(level, builder, b, layout, closure, y0, z0);
             default -> {
                 builder.setBuildStage(STAGE_ROD_CONTROLLERS);
                 yield true;
@@ -212,16 +213,43 @@ public final class TurbineBuildLogic {
         };
     }
 
+    private static boolean skipsRotorContents(TurbineBuilderBlockEntity builder, int pattern) {
+        if (pattern == TurbineRodPatternLogic.PATTERN_WEBSITE) {
+            return !builder.hasValidWebsiteDesign();
+        }
+        return TurbineRodPatternLogic.skipsRotorContents(pattern);
+    }
+
+    private static java.util.function.BiPredicate<Integer, Integer> websiteRodOverride(TurbineBuilderBlockEntity builder) {
+        if (builder.getRodPattern() == TurbineRodPatternLogic.PATTERN_WEBSITE && builder.hasValidWebsiteDesign()) {
+            return builder::websiteIsRodColumn;
+        }
+        return null;
+    }
+
+    private static boolean isPatternRodColumn(TurbineBuilderBlockEntity builder, int ca, int cb, int rw, int rd) {
+        return TurbineRodPatternLogic.isRodColumn(ca, cb, rw, rd, builder.getRodPattern(), websiteRodOverride(builder));
+    }
+
+    private static boolean isPatternRodControllerCell(
+            TurbineBuilderBlockEntity builder, TurbineRotorLayout layout, int pattern, int x, int y, int z) {
+        if (skipsRotorContents(builder, pattern)) {
+            return false;
+        }
+        int ca = layout.crossAFromWorld(x, y, z);
+        int cb = layout.crossBFromWorld(x, y, z);
+        return isPatternRodColumn(builder, ca, cb, layout.crossSizeA(), layout.crossSizeB());
+    }
+
     private static boolean tickClosureDeckY(
             ServerLevel level, TurbineBuilderBlockEntity builder, BuildBounds b,
-            TurbineRotorLayout layout, TurbineRodControllerLayout.Center center, int closure,
-            int x0, int z0) {
+            TurbineRotorLayout layout, int closure, int x0, int z0) {
+        int pattern = builder.getRodPattern();
         for (int xx = x0; xx < b.maxX; xx++) {
             int zz0 = (xx == x0) ? z0 : b.minZ + 1;
             for (int zz = zz0; zz < b.maxZ; zz++) {
                 builder.setBuildFrameCursor(xx, closure, zz + 1);
-                if (!TurbineRodPatternLogic.skipsRotorContents(builder.getRodPattern())
-                        && layout.isRodControllerAt(xx, closure, zz, center)) {
+                if (isPatternRodControllerCell(builder, layout, pattern, xx, closure, zz)) {
                     continue;
                 }
                 if (tryPlaceClosureCasing(level, builder, new BlockPos(xx, closure, zz))) {
@@ -236,14 +264,13 @@ public final class TurbineBuildLogic {
 
     private static boolean tickClosureDeckZ(
             ServerLevel level, TurbineBuilderBlockEntity builder, BuildBounds b,
-            TurbineRotorLayout layout, TurbineRodControllerLayout.Center center, int closure,
-            int x0, int y0) {
+            TurbineRotorLayout layout, int closure, int x0, int y0) {
+        int pattern = builder.getRodPattern();
         for (int xx = x0; xx < b.maxX; xx++) {
             int yy0 = (xx == x0) ? y0 : b.minY + 1;
             for (int yy = yy0; yy < b.maxY; yy++) {
                 builder.setBuildFrameCursor(xx, yy, closure + 1);
-                if (!TurbineRodPatternLogic.skipsRotorContents(builder.getRodPattern())
-                        && layout.isRodControllerAt(xx, yy, closure, center)) {
+                if (isPatternRodControllerCell(builder, layout, pattern, xx, yy, closure)) {
                     continue;
                 }
                 if (tryPlaceClosureCasing(level, builder, new BlockPos(xx, yy, closure))) {
@@ -258,14 +285,13 @@ public final class TurbineBuildLogic {
 
     private static boolean tickClosureDeckX(
             ServerLevel level, TurbineBuilderBlockEntity builder, BuildBounds b,
-            TurbineRotorLayout layout, TurbineRodControllerLayout.Center center, int closure,
-            int y0, int z0) {
+            TurbineRotorLayout layout, int closure, int y0, int z0) {
+        int pattern = builder.getRodPattern();
         for (int yy = y0; yy < b.maxY; yy++) {
             int zz0 = (yy == y0) ? z0 : b.minZ + 1;
             for (int zz = zz0; zz < b.maxZ; zz++) {
                 builder.setBuildFrameCursor(closure, yy, zz + 1);
-                if (!TurbineRodPatternLogic.skipsRotorContents(builder.getRodPattern())
-                        && layout.isRodControllerAt(closure, yy, zz, center)) {
+                if (isPatternRodControllerCell(builder, layout, pattern, closure, yy, zz)) {
                     continue;
                 }
                 if (tryPlaceClosureCasing(level, builder, new BlockPos(closure, yy, zz))) {
@@ -293,7 +319,7 @@ public final class TurbineBuildLogic {
     private static void finishClosureDeck(TurbineBuilderBlockEntity builder) {
         builder.setBuildFrameCursor(Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE);
         int pattern = builder.getRodPattern();
-        if (TurbineRodPatternLogic.skipsRotorContents(pattern)) {
+        if (skipsRotorContents(builder, pattern)) {
             builder.setBuildStage(TurbineRodPatternLogic.skipsCoils(pattern) ? STAGE_DONE : STAGE_COILS);
         } else {
             builder.setBuildStage(STAGE_ROD_CONTROLLERS);
@@ -306,28 +332,44 @@ public final class TurbineBuildLogic {
             builder.setBuildStage(STAGE_RODS);
             return true;
         }
-        TurbineRodControllerLayout.Center center = layout.primaryCenter();
-        BlockPos pos = layout.controllerPos(center);
+        List<TurbineRodControllerLayout.Center> columns = TurbineRodPatternLogic.rodColumns(
+                layout.crossSizeA(), layout.crossSizeB(), builder.getRodPattern(), websiteRodOverride(builder));
+        if (columns.isEmpty()) {
+            builder.setBuildStage(STAGE_RODS);
+            return true;
+        }
+        int startIndex = 0;
+        if (builder.getBuildRodCtrlRx() != Integer.MIN_VALUE) {
+            for (int i = 0; i < columns.size(); i++) {
+                TurbineRodControllerLayout.Center c = columns.get(i);
+                if (c.rx() == builder.getBuildRodCtrlRx() && c.rz() == builder.getBuildRodCtrlRz()) {
+                    startIndex = i;
+                    break;
+                }
+            }
+        }
         Direction axis = layout.growthAxis();
         BlockState desired = ModBlocks.TURBINE_ROD_CONTROLLER.get().defaultBlockState()
                 .setValue(TurbineRodControllerBlock.FACING, axis);
-        BlockState current = level.getBlockState(pos);
-        if (current.is(ModBlocks.TURBINE_ROD_CONTROLLER.get())
-                && current.hasProperty(TurbineRodControllerBlock.FACING)
-                && current.getValue(TurbineRodControllerBlock.FACING) == axis) {
+        for (int i = startIndex; i < columns.size(); i++) {
+            TurbineRodControllerLayout.Center center = columns.get(i);
+            BlockPos pos = layout.controllerPos(center);
             builder.setBuildRodCtrlCursor(center.rx(), center.rz());
-            builder.setBuildStage(STAGE_RODS);
-            return true;
+            BlockState current = level.getBlockState(pos);
+            if (current.is(ModBlocks.TURBINE_ROD_CONTROLLER.get())
+                    && current.hasProperty(TurbineRodControllerBlock.FACING)
+                    && current.getValue(TurbineRodControllerBlock.FACING) == axis) {
+                continue;
+            }
+            PlaceResult result = tryPlaceState(level, builder, pos, desired);
+            if (result == PlaceResult.WAIT) {
+                return true;
+            }
+            if (result == PlaceResult.PLACED) {
+                return true;
+            }
         }
-        PlaceResult result = tryPlaceState(level, builder, pos, desired);
-        if (result == PlaceResult.WAIT) {
-            return true;
-        }
-        if (result == PlaceResult.PLACED) {
-            builder.setBuildRodCtrlCursor(center.rx(), center.rz());
-            builder.setBuildStage(STAGE_RODS);
-            return true;
-        }
+        builder.setBuildRodCtrlCursor(Integer.MIN_VALUE, Integer.MIN_VALUE);
         builder.setBuildStage(STAGE_RODS);
         return true;
     }
@@ -350,7 +392,7 @@ public final class TurbineBuildLogic {
                 int cbStart = (t == t0 && ca == caStart) ? cb0 : 0;
                 for (int cb = cbStart; cb < layout.crossSizeB(); cb++) {
                     builder.setBuildRodCursor(ca, t, cb + 1);
-                    if (!TurbineRodPatternLogic.isRodColumn(ca, cb, layout.crossSizeA(), layout.crossSizeB(), builder.getRodPattern())) {
+                    if (!isPatternRodColumn(builder, ca, cb, layout.crossSizeA(), layout.crossSizeB())) {
                         continue;
                     }
                     BlockPos pos = layout.rodPos(t, ca, cb);
@@ -396,7 +438,7 @@ public final class TurbineBuildLogic {
                 int cbStart = (t == t0 && ca == caStart) ? cb0 : 0;
                 for (int cb = cbStart; cb < layout.crossSizeB(); cb++) {
                     builder.setBuildRodCursor(ca, t, cb + 1);
-                    if (!TurbineRodPatternLogic.isRodColumn(ca, cb, layout.crossSizeA(), layout.crossSizeB(), builder.getRodPattern())) {
+                    if (!isPatternRodColumn(builder, ca, cb, layout.crossSizeA(), layout.crossSizeB())) {
                         continue;
                     }
                     BlockPos rodPos = layout.rodPos(t, ca, cb);
@@ -405,8 +447,10 @@ public final class TurbineBuildLogic {
                         continue;
                     }
                     Direction axis = rodState.getValue(TurbineRodBlock.FACING);
+                    int bladePattern = TurbineRodPatternLogic.bladeGrowthPattern(
+                            builder.getRodPattern(), builder.isWebsiteClimbProfile());
                     int targetRing = TurbineBladePlacement.effectiveTargetBladeRing(
-                            layout, t, builder.getRodPattern());
+                            layout, t, bladePattern, ca, cb);
                     if (placeBladesToRing(level, builder, rodPos, rodState, axis, targetRing)) {
                         builder.setBuildRodCursor(ca, t, cb);
                         return true;
@@ -828,11 +872,12 @@ public final class TurbineBuildLogic {
     }
 
     private static long countPlacedWork(ServerLevel level, TurbineBuilderBlockEntity builder, BuildBounds b) {
+        int pattern = builder.getRodPattern();
         return countPlacedFrameShell(level, builder, b)
-                + countPlacedClosureDeck(level, b, b.layout)
-                + countPlacedRodController(level, b, b.layout)
-                + countPlacedRods(level, b, builder.getRodPattern())
-                + countPlacedBlades(level, b, builder.getRodPattern())
+                + countPlacedClosureDeck(level, builder, b, b.layout, pattern)
+                + countPlacedRodController(level, builder, b, b.layout, pattern)
+                + countPlacedRods(level, builder, b)
+                + countPlacedBlades(level, builder, b)
                 + countMatchingCoilCells(level, b, builder.getSelectedCoilIndex());
     }
 
@@ -861,15 +906,15 @@ public final class TurbineBuildLogic {
         return count;
     }
 
-    private static int countPlacedClosureDeck(ServerLevel level, BuildBounds b, TurbineRotorLayout layout) {
-        TurbineRodControllerLayout.Center center = layout.primaryCenter();
+    private static int countPlacedClosureDeck(ServerLevel level, TurbineBuilderBlockEntity builder,
+                                               BuildBounds b, TurbineRotorLayout layout, int pattern) {
         int closure = layout.closureCoord();
         int count = 0;
         switch (layout.growthAxis().getAxis()) {
             case Y -> {
                 for (int xx = b.minX + 1; xx < b.maxX; xx++) {
                     for (int zz = b.minZ + 1; zz < b.maxZ; zz++) {
-                        if (layout.isRodControllerAt(xx, closure, zz, center)) {
+                        if (isPatternRodControllerCell(builder, layout, pattern, xx, closure, zz)) {
                             continue;
                         }
                         if (isClosureDeckPlaced(level, new BlockPos(xx, closure, zz))) {
@@ -881,7 +926,7 @@ public final class TurbineBuildLogic {
             case Z -> {
                 for (int xx = b.minX + 1; xx < b.maxX; xx++) {
                     for (int yy = b.minY + 1; yy < b.maxY; yy++) {
-                        if (layout.isRodControllerAt(xx, yy, closure, center)) {
+                        if (isPatternRodControllerCell(builder, layout, pattern, xx, yy, closure)) {
                             continue;
                         }
                         if (isClosureDeckPlaced(level, new BlockPos(xx, yy, closure))) {
@@ -893,7 +938,7 @@ public final class TurbineBuildLogic {
             case X -> {
                 for (int yy = b.minY + 1; yy < b.maxY; yy++) {
                     for (int zz = b.minZ + 1; zz < b.maxZ; zz++) {
-                        if (layout.isRodControllerAt(closure, yy, zz, center)) {
+                        if (isPatternRodControllerCell(builder, layout, pattern, closure, yy, zz)) {
                             continue;
                         }
                         if (isClosureDeckPlaced(level, new BlockPos(closure, yy, zz))) {
@@ -912,30 +957,35 @@ public final class TurbineBuildLogic {
         return state.is(ModBlockTags.TURBINE_SHELL_CASINGS) || TurbineValidation.isShellBlock(state);
     }
 
-    private static int countPlacedRodController(ServerLevel level, BuildBounds b, TurbineRotorLayout layout) {
+    private static int countPlacedRodController(ServerLevel level, TurbineBuilderBlockEntity builder,
+                                                 BuildBounds b, TurbineRotorLayout layout, int pattern) {
         if (layout.crossSizeA() <= 0 || layout.crossSizeB() <= 0) {
             return 0;
         }
-        TurbineRodControllerLayout.Center center = layout.primaryCenter();
-        BlockPos pos = layout.controllerPos(center);
-        BlockState state = level.getBlockState(pos);
-        if (!state.is(ModBlocks.TURBINE_ROD_CONTROLLER.get())) {
-            return 0;
+        int count = 0;
+        Direction axis = layout.growthAxis();
+        for (TurbineRodControllerLayout.Center center : TurbineRodPatternLogic.rodColumns(
+                layout.crossSizeA(), layout.crossSizeB(), pattern, websiteRodOverride(builder))) {
+            BlockPos pos = layout.controllerPos(center);
+            BlockState state = level.getBlockState(pos);
+            if (!state.is(ModBlocks.TURBINE_ROD_CONTROLLER.get())) {
+                continue;
+            }
+            if (state.hasProperty(TurbineRodControllerBlock.FACING)
+                    && state.getValue(TurbineRodControllerBlock.FACING) == axis) {
+                count++;
+            }
         }
-        if (state.hasProperty(TurbineRodControllerBlock.FACING)
-                && state.getValue(TurbineRodControllerBlock.FACING) == layout.growthAxis()) {
-            return 1;
-        }
-        return 0;
+        return count;
     }
 
-    private static int countPlacedRods(ServerLevel level, BuildBounds b, int rodPattern) {
+    private static int countPlacedRods(ServerLevel level, TurbineBuilderBlockEntity builder, BuildBounds b) {
         TurbineRotorLayout layout = b.layout;
         int count = 0;
         for (int t = 0; t < layout.rodExtent(); t++) {
             for (int ca = 0; ca < layout.crossSizeA(); ca++) {
                 for (int cb = 0; cb < layout.crossSizeB(); cb++) {
-                    if (!TurbineRodPatternLogic.isRodColumn(ca, cb, layout.crossSizeA(), layout.crossSizeB(), rodPattern)) {
+                    if (!isPatternRodColumn(builder, ca, cb, layout.crossSizeA(), layout.crossSizeB())) {
                         continue;
                     }
                     if (level.getBlockState(layout.rodPos(t, ca, cb)).is(ModBlocks.TURBINE_ROD.get())) {
@@ -947,13 +997,13 @@ public final class TurbineBuildLogic {
         return count;
     }
 
-    private static int countPlacedBlades(ServerLevel level, BuildBounds b, int rodPattern) {
+    private static int countPlacedBlades(ServerLevel level, TurbineBuilderBlockEntity builder, BuildBounds b) {
         TurbineRotorLayout layout = b.layout;
         int count = 0;
         for (int t = 0; t < layout.rodExtent(); t++) {
             for (int ca = 0; ca < layout.crossSizeA(); ca++) {
                 for (int cb = 0; cb < layout.crossSizeB(); cb++) {
-                    if (!TurbineRodPatternLogic.isRodColumn(ca, cb, layout.crossSizeA(), layout.crossSizeB(), rodPattern)) {
+                    if (!isPatternRodColumn(builder, ca, cb, layout.crossSizeA(), layout.crossSizeB())) {
                         continue;
                     }
                     BlockPos rodPos = layout.rodPos(t, ca, cb);

@@ -32,17 +32,20 @@ import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import net.unfamily.colossal_reactors.Config;
+import net.unfamily.colossal_reactors.builder.web.ModDecodedTurbineDesign;
 import net.unfamily.colossal_reactors.turbine.ElecCoilLoader;
 import net.unfamily.colossal_reactors.menu.TurbineBuilderMenu;
 import net.unfamily.colossal_reactors.turbine.TurbineBuildLogic;
 import net.unfamily.colossal_reactors.turbine.TurbineBuildMaterialCounter;
 import net.unfamily.colossal_reactors.turbine.TurbineGenerationLoader;
 import net.unfamily.colossal_reactors.turbine.TurbinePlacementAxis;
+import net.unfamily.colossal_reactors.turbine.TurbineRodPatternLogic;
 import net.unfamily.colossal_reactors.turbine.TurbineRodSpaceLayout;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * BlockEntity for Turbine Builder. Holds a 9x3 buffer inventory and a fluid tank for steam marking.
@@ -84,6 +87,7 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
     private static final String TAG_BUILD_PROGRESS_VISIBLE = "BuildProgressVisible";
     private static final String TAG_PLACEMENT_AXIS = "PlacementAxis";
     private static final String TAG_MARK_INPUT_FILTERS = "MarkInputFilters";
+    private static final String TAG_WEBSITE_DESIGN = "WebsiteDesign";
     private static final int BUFFER_SLOTS = 9 * 3;
 
     private final List<ItemStack> markInputFilters = new ArrayList<>();
@@ -187,6 +191,14 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
     /** Last computed build progress (0-100). Kept visible after build completes/aborts until user stops or restarts. */
     private int buildProgressPercent = 0;
     private boolean buildProgressVisible = false;
+    /** Raw ModDecoded {@code mdct1} seed (or pasted URL fragment); parsed on use. */
+    private String websiteDesignCode = "";
+    /** Cached rod mask from {@link #websiteDesignCode}; null when invalid/cleared. */
+    @Nullable
+    private transient boolean[] websiteRodMaskCache;
+    private transient boolean websiteClimbProfile;
+    private transient int websiteCacheW = -1;
+    private transient int websiteCacheD = -1;
     // Build progress cursors (NEXT position to process). These make building "forward-only" and avoid rescanning from start.
     private int buildStage = 0;
     private int buildFrameX = Integer.MIN_VALUE, buildFrameY = Integer.MIN_VALUE, buildFrameZ = Integer.MIN_VALUE;
@@ -195,9 +207,9 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
     private int buildLiquidLx = Integer.MIN_VALUE, buildLiquidLy = Integer.MIN_VALUE, buildLiquidLz = Integer.MIN_VALUE;
     private int buildHeatLx = Integer.MIN_VALUE, buildHeatLy = Integer.MIN_VALUE, buildHeatLz = Integer.MIN_VALUE;
 
-    private static final int ROD_PATTERN_COUNT = 4;
+    private static final int ROD_PATTERN_COUNT = TurbineRodPatternLogic.PATTERN_COUNT;
     /** Stored GUI setting; displayed layer count is {@link TurbineRodSpaceLayout#appliedCoilLayerCount}. */
-    private static final int COIL_LAYER_MIN = 0;
+    private static final int COIL_LAYER_MIN = 1;
     private static final int COIL_LAYER_MAX = 32;
 
     public void resetBuildProgress() {
@@ -271,13 +283,18 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
                 case 0 -> {
                     sizeLeft = Math.max(0, Math.min(getMaxWidth() - sizeRight, value));
                     if (sizeLeft + sizeRight < 1) sizeRight = 1 - sizeLeft;
+                    invalidateWebsiteRodCache();
                 }
                 case 1 -> {
                     sizeRight = Math.max(0, Math.min(getMaxWidth() - sizeLeft, value));
                     if (sizeLeft + sizeRight < 1) sizeLeft = 1 - sizeRight;
+                    invalidateWebsiteRodCache();
                 }
                 case 2 -> sizeHeight = Math.max(MIN_SIZE, Math.min(getMaxHeight(), value));
-                case 3 -> sizeDepth = Math.max(MIN_SIZE, Math.min(getMaxDepth(), value));
+                case 3 -> {
+                    sizeDepth = Math.max(MIN_SIZE, Math.min(getMaxDepth(), value));
+                    invalidateWebsiteRodCache();
+                }
                 case 7 -> selectedCoilIndex = Math.max(0, Math.min(ElecCoilLoader.getCoilOptionCount() - 1, value));
                 case 8 -> coilLayerCount = Math.max(COIL_LAYER_MIN, Math.min(COIL_LAYER_MAX, value));
                 case 9 -> rodPattern = Math.max(0, Math.min(ROD_PATTERN_COUNT - 1, value));
@@ -383,8 +400,121 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
     public int getSizeRight() { return sizeRight; }
     public int getSizeHeight() { return sizeHeight; }
     public int getSizeDepth() { return sizeDepth; }
+    public int getExteriorWidth() { return sizeLeft + sizeRight + 1; }
+    public int getExteriorHeight() { return sizeHeight + 1; }
+    public int getExteriorDepth() { return sizeDepth + 1; }
     public int getSelectedCoilIndex() { return selectedCoilIndex; }
     public int getCoilLayerCount() { return coilLayerCount; }
+
+    public void setRodPattern(int pattern) {
+        this.rodPattern = Math.max(0, Math.min(ROD_PATTERN_COUNT - 1, pattern));
+        setChanged();
+    }
+
+    public void setSelectedCoilIndex(int index) {
+        this.selectedCoilIndex = Math.max(0, Math.min(ElecCoilLoader.getCoilOptionCount() - 1, index));
+        setChanged();
+    }
+
+    public void setCoilLayerCount(int layers) {
+        this.coilLayerCount = Math.max(COIL_LAYER_MIN, Math.min(COIL_LAYER_MAX, layers));
+        clampCoilLayerCountToFit();
+        setChanged();
+    }
+
+    /**
+     * Sets exterior W×D×H (blocks) centered on the builder: {@code sizeLeft=(W-1)/2},
+     * {@code sizeRight=W-1-sizeLeft}, {@code sizeHeight=H-1}, {@code sizeDepth=D-1}.
+     */
+    public void setExteriorSizeCentered(int exteriorW, int exteriorD, int exteriorH) {
+        int w = Math.max(MIN_SIZE + 1, Math.min(getMaxWidth() + 1, exteriorW));
+        int d = Math.max(MIN_SIZE + 1, Math.min(getMaxDepth() + 1, exteriorD));
+        int h = Math.max(MIN_SIZE + 1, Math.min(getMaxHeight() + 1, exteriorH));
+        sizeLeft = (w - 1) / 2;
+        sizeRight = (w - 1) - sizeLeft;
+        sizeDepth = Math.max(MIN_SIZE, d - 1);
+        sizeHeight = Math.max(MIN_SIZE, h - 1);
+        clampCoilLayerCountToFit();
+        invalidateWebsiteRodCache();
+        setChanged();
+    }
+
+    public String getWebsiteDesign() {
+        return websiteDesignCode != null ? websiteDesignCode : "";
+    }
+
+    /** Stores the raw seed (or pasted URL); refreshes the decoded rod mask when valid. */
+    public void setWebsiteDesign(String code) {
+        String raw = code != null ? code.trim() : "";
+        Optional<ModDecodedTurbineDesign> decoded = ModDecodedTurbineDesign.decode(raw);
+        if (decoded.isPresent()) {
+            websiteDesignCode = decoded.get().code();
+            refreshWebsiteRodCache(decoded.get());
+        } else {
+            String extracted = ModDecodedTurbineDesign.extractCode(raw);
+            websiteDesignCode = extracted != null ? extracted : raw;
+            invalidateWebsiteRodCache();
+        }
+        setChanged();
+    }
+
+    public boolean hasValidWebsiteDesign() {
+        ensureWebsiteRodCache();
+        return websiteRodMaskCache != null;
+    }
+
+    /** True when the website design uses climbing blade rings ({@code c} profile). */
+    public boolean isWebsiteClimbProfile() {
+        ensureWebsiteRodCache();
+        return websiteClimbProfile;
+    }
+
+    public boolean websiteIsRodColumn(int rx, int rz) {
+        ensureWebsiteRodCache();
+        if (websiteRodMaskCache == null) {
+            return false;
+        }
+        int iw = getExteriorWidth() - 2;
+        int id = getExteriorDepth() - 2;
+        if (rx < 0 || rz < 0 || rx >= iw || rz >= id) {
+            return false;
+        }
+        int i = rx * id + rz;
+        return i >= 0 && i < websiteRodMaskCache.length && websiteRodMaskCache[i];
+    }
+
+    private void ensureWebsiteRodCache() {
+        int w = getExteriorWidth();
+        int d = getExteriorDepth();
+        if (websiteRodMaskCache != null && websiteCacheW == w && websiteCacheD == d) {
+            return;
+        }
+        Optional<ModDecodedTurbineDesign> decoded = ModDecodedTurbineDesign.decode(websiteDesignCode);
+        if (decoded.isEmpty()) {
+            invalidateWebsiteRodCache();
+            return;
+        }
+        ModDecodedTurbineDesign design = decoded.get();
+        if (design.exteriorX() != w || design.exteriorZ() != d) {
+            invalidateWebsiteRodCache();
+            return;
+        }
+        refreshWebsiteRodCache(design);
+    }
+
+    private void refreshWebsiteRodCache(ModDecodedTurbineDesign design) {
+        websiteRodMaskCache = design.rodMask().clone();
+        websiteClimbProfile = design.climbProfile();
+        websiteCacheW = design.exteriorX();
+        websiteCacheD = design.exteriorZ();
+    }
+
+    private void invalidateWebsiteRodCache() {
+        websiteRodMaskCache = null;
+        websiteClimbProfile = false;
+        websiteCacheW = -1;
+        websiteCacheD = -1;
+    }
 
     /** Layers used by build/simulation (GUI setting + 1, clamped). */
     public int getAppliedCoilLayerCount() {
@@ -503,7 +633,7 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
         setChanged();
     }
 
-    /** Cycle coil layer count (1 .. max for current turbine height). */
+    /** Cycle coil layer count (1 .. max for current turbine height). On Website, rewrites mdct1 layers. */
     public void cycleCoilLayerCount(boolean next) {
         int maxForSize = maxCoilLayersForCurrentHeight();
         if (next) {
@@ -511,6 +641,7 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
         } else {
             coilLayerCount = coilLayerCount <= COIL_LAYER_MIN ? maxForSize : coilLayerCount - 1;
         }
+        net.unfamily.colossal_reactors.builder.web.BuilderWebsiteDesigns.syncTurbineWebsiteSeedFromCoilSelection(this);
         setChanged();
     }
 
@@ -535,11 +666,12 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
         setChanged();
     }
 
-    /** Cycle elec coil block type. */
+    /** Cycle elec coil block type. On Website pattern, also rewrites the mdct1 seed coil token. */
     public void cycleCoil(boolean next) {
         int max = ElecCoilLoader.getCoilOptionCount() - 1;
         if (next) selectedCoilIndex = selectedCoilIndex >= max ? 0 : selectedCoilIndex + 1;
         else selectedCoilIndex = selectedCoilIndex <= 0 ? max : selectedCoilIndex - 1;
+        net.unfamily.colossal_reactors.builder.web.BuilderWebsiteDesigns.syncTurbineWebsiteSeedFromCoilSelection(this);
         setChanged();
     }
 
@@ -596,6 +728,10 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
     }
 
     /** Direction: 0=up, 1=left button (adjusts sizeRight), 2=right button (adjusts sizeLeft), 3=behind. amount=1,5,10. */
+    /**
+     * Direction: 0=up, 1=left (sizeRight), 2=right (sizeLeft), 3=behind,
+     * 4=offset toward left («), 5=offset toward right (»), 6=center L/R.
+     */
     public void adjustSize(int direction, boolean increment, int amount) {
         int delta = increment ? amount : -amount;
         switch (direction) {
@@ -614,10 +750,34 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
                 if (sizeLeft + sizeRight < 1) sizeRight = 1 - sizeLeft;
             }
             case 3 -> sizeDepth = Math.max(MIN_SIZE, Math.min(getMaxDepth(), sizeDepth + delta));
+            case 4 -> offsetWidth(delta);
+            case 5 -> offsetWidth(-delta);
+            case 6 -> centerWidth();
             default -> {}
         }
         if (sizeLeft + sizeRight < 1) { sizeLeft = 1; sizeRight = 0; }
+        invalidateWebsiteRodCache();
         setChanged();
+    }
+
+    public void offsetWidth(int amountTowardLeft) {
+        if (amountTowardLeft == 0) {
+            return;
+        }
+        int total = sizeLeft + sizeRight;
+        int newLeft = Math.max(0, Math.min(total, sizeLeft + amountTowardLeft));
+        sizeLeft = newLeft;
+        sizeRight = total - sizeLeft;
+        if (sizeLeft + sizeRight < 1) {
+            sizeLeft = 1;
+            sizeRight = 0;
+        }
+    }
+
+    public void centerWidth() {
+        int total = sizeLeft + sizeRight;
+        sizeLeft = total / 2;
+        sizeRight = total - sizeLeft;
     }
 
     /** Single step (backward compatible). */
@@ -704,6 +864,9 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
         tag.putInt(TAG_BUILD_HEAT_LZ, buildHeatLz);
         tag.putInt(TAG_BUILD_PROGRESS, buildProgressPercent);
         tag.putBoolean(TAG_BUILD_PROGRESS_VISIBLE, buildProgressVisible);
+        if (websiteDesignCode != null && !websiteDesignCode.isEmpty()) {
+            tag.putString(TAG_WEBSITE_DESIGN, websiteDesignCode);
+        }
         CompoundTag markTag = new CompoundTag();
         for (int i = 0; i < markInputFilters.size(); i++) {
             final int slot = i;
@@ -775,6 +938,13 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
         if (tag.contains(TAG_INVALID_BLOCKS)) invalidBlocksDetected = tag.getBoolean(TAG_INVALID_BLOCKS);
         if (tag.contains(TAG_BUILD_PROGRESS)) buildProgressPercent = tag.getInt(TAG_BUILD_PROGRESS);
         if (tag.contains(TAG_BUILD_PROGRESS_VISIBLE)) buildProgressVisible = tag.getBoolean(TAG_BUILD_PROGRESS_VISIBLE);
+        if (tag.contains(TAG_WEBSITE_DESIGN)) {
+            websiteDesignCode = tag.getString(TAG_WEBSITE_DESIGN);
+            invalidateWebsiteRodCache();
+        } else {
+            websiteDesignCode = "";
+            invalidateWebsiteRodCache();
+        }
         if (tag.contains(TAG_BUILD_STAGE)) buildStage = tag.getInt(TAG_BUILD_STAGE);
         if (tag.contains(TAG_BUILD_FRAME_X)) buildFrameX = tag.getInt(TAG_BUILD_FRAME_X);
         if (tag.contains(TAG_BUILD_FRAME_Y)) buildFrameY = tag.getInt(TAG_BUILD_FRAME_Y);

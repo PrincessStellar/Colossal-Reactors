@@ -50,12 +50,18 @@ public final class TurbineBladePlacement {
     }
 
     /**
-     * Pattern/config target ring clamped to what fits in {@link TurbineRotorLayout} for the primary rod column.
+     * Pattern/config target ring clamped to what fits for the primary rod column.
      */
     public static int effectiveTargetBladeRing(TurbineRotorLayout layout, int layerIndex, int rodPattern) {
         TurbineRodControllerLayout.Center center = layout.primaryCenter();
+        return effectiveTargetBladeRing(layout, layerIndex, rodPattern, center.rx(), center.rz());
+    }
+
+    /** Pattern/config target ring clamped to clearance around column {@code (crossA, crossB)}. */
+    public static int effectiveTargetBladeRing(
+            TurbineRotorLayout layout, int layerIndex, int rodPattern, int crossA, int crossB) {
         int structural = maxRingForRodColumn(
-                center.rx(), center.rz(), layout.crossSizeA(), layout.crossSizeB());
+                crossA, crossB, layout.crossSizeA(), layout.crossSizeB());
         int patternRing = TurbineRodPatternLogic.targetBladeRingForLayer(
                 layerIndex, layout.rodExtent(), rodPattern);
         return Math.min(patternRing, Math.min(maxRing(), structural));

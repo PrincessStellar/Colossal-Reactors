@@ -4,62 +4,225 @@
 	"textures": {
 		"0": "colossal_reactors:block/reactor/rod/reactor_rod_top",
 		"1": "colossal_reactors:block/reactor/rod/reactor_rod_side",
-		"3": "colossal_reactors:block/reactor/rod/uranium",
+		"3": "colossal_reactors:block/reactor/rod/rod_inside",
 		"particle": "colossal_reactors:block/reactor/rod/reactor_rod_side"
 	},
 	"elements": [
 		{
 			"name": "frame",
-			"from": [0, 0, 0],
-			"to": [16, 16, 16],
+			"from": [
+				0,
+				0,
+				0
+			],
+			"to": [
+				16,
+				16,
+				16
+			],
 			"faces": {
-				"north": {"uv": [0, 0, 16, 16], "texture": "#1"},
-				"east": {"uv": [0, 0, 16, 16], "texture": "#1"},
-				"south": {"uv": [0, 0, 16, 16], "texture": "#1"},
-				"west": {"uv": [0, 0, 16, 16], "texture": "#1"},
-				"up": {"uv": [0, 0, 16, 16], "texture": "#0"},
-				"down": {"uv": [0, 0, 16, 16], "texture": "#1"}
+				"north": {
+					"uv": [
+						0,
+						0,
+						16,
+						16
+					],
+					"texture": "#1"
+				},
+				"east": {
+					"uv": [
+						0,
+						0,
+						16,
+						16
+					],
+					"texture": "#1"
+				},
+				"south": {
+					"uv": [
+						0,
+						0,
+						16,
+						16
+					],
+					"texture": "#1"
+				},
+				"west": {
+					"uv": [
+						0,
+						0,
+						16,
+						16
+					],
+					"texture": "#1"
+				},
+				"up": {
+					"uv": [
+						0,
+						0,
+						16,
+						16
+					],
+					"texture": "#0"
+				},
+				"down": {
+					"uv": [
+						0,
+						0,
+						16,
+						16
+					],
+					"texture": "#1"
+				}
 			}
 		},
 		{
 			"name": "uranium",
-			"from": [0.3, 0.3, 0.3],
-			"to": [15.7, 12.7, 15.7],
+			"from": [
+				0.3,
+				0.3,
+				0.3
+			],
+			"to": [
+				15.7,
+				12.7,
+				15.7
+			],
 			"faces": {
-				"north": {"uv": [0, 3, 16, 16], "texture": "#3"},
-				"east": {"uv": [0, 3, 16, 16], "texture": "#3"},
-				"south": {"uv": [0, 3, 16, 16], "texture": "#3"},
-				"west": {"uv": [0, 3, 16, 16], "texture": "#3", "cullface": "west"},
-				"up": {"uv": [0, 0, 16, 16], "texture": "#3"},
-				"down": {"uv": [0, 0, 16, 16], "texture": "#3"}
+				"north": {
+					"uv": [
+						0,
+						3,
+						16,
+						16
+					],
+					"texture": "#3",
+					"tintindex": 0
+				},
+				"east": {
+					"uv": [
+						0,
+						3,
+						16,
+						16
+					],
+					"texture": "#3",
+					"tintindex": 0
+				},
+				"south": {
+					"uv": [
+						0,
+						3,
+						16,
+						16
+					],
+					"texture": "#3",
+					"tintindex": 0
+				},
+				"west": {
+					"uv": [
+						0,
+						3,
+						16,
+						16
+					],
+					"texture": "#3",
+					"cullface": "west",
+					"tintindex": 0
+				},
+				"up": {
+					"uv": [
+						0,
+						0,
+						16,
+						16
+					],
+					"texture": "#3",
+					"tintindex": 0
+				},
+				"down": {
+					"uv": [
+						0,
+						0,
+						16,
+						16
+					],
+					"texture": "#3",
+					"tintindex": 0
+				}
 			}
 		}
 	],
 	"display": {
 		"thirdperson_righthand": {
-			"rotation": [9.22, 43.35, -23.02],
-			"scale": [0.32, 0.32, 0.32]
+			"rotation": [
+				9.22,
+				43.35,
+				-23.02
+			],
+			"scale": [
+				0.32,
+				0.32,
+				0.32
+			]
 		},
 		"thirdperson_lefthand": {
-			"rotation": [11, -46.05, 25.51],
-			"scale": [0.32, 0.32, 0.32]
+			"rotation": [
+				11,
+				-46.05,
+				25.51
+			],
+			"scale": [
+				0.32,
+				0.32,
+				0.32
+			]
 		},
 		"firstperson_righthand": {
-			"scale": [0.32, 0.32, 0.32]
+			"scale": [
+				0.32,
+				0.32,
+				0.32
+			]
 		},
 		"firstperson_lefthand": {
-			"scale": [0.32, 0.32, 0.32]
+			"scale": [
+				0.32,
+				0.32,
+				0.32
+			]
 		},
 		"ground": {
-			"translation": [0, 2, 0],
-			"scale": [0.32, 0.32, 0.32]
+			"translation": [
+				0,
+				2,
+				0
+			],
+			"scale": [
+				0.32,
+				0.32,
+				0.32
+			]
 		},
 		"gui": {
-			"rotation": [16.75, 38.75, 0],
-			"scale": [0.5, 0.5, 0.5]
+			"rotation": [
+				16.75,
+				38.75,
+				0
+			],
+			"scale": [
+				0.5,
+				0.5,
+				0.5
+			]
 		},
 		"fixed": {
-			"scale": [0.5, 0.5, 0.5]
+			"scale": [
+				0.5,
+				0.5,
+				0.5
+			]
 		}
 	}
 }

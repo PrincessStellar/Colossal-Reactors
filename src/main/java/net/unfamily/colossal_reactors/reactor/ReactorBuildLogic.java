@@ -76,11 +76,12 @@ public final class ReactorBuildLogic {
 
                     if (onBorder) {
                         boolean validFrame = ReactorValidation.isShellBlock(blockState)
-                                || (blockState.is(ModBlocks.ROD_CONTROLLER.get()) && y == maxY && isRodControllerPos(x, z, minX, minZ, maxY, insetXZ, rw, rd, pattern, expansionRodAtCenter));
+                                || (blockState.is(ModBlocks.ROD_CONTROLLER.get()) && y == maxY
+                                && isRodControllerPos(builder, x, z, minX, minZ, insetXZ, rw, rd, pattern, expansionRodAtCenter));
                         if (hasBlock && !validFrame) return true;
                     } else {
                         boolean isRodPos = (lx >= insetXZ && lx < w - insetXZ && ly >= 1 && ly < h - 1 && lz >= insetXZ && lz < d - insetXZ)
-                                && RodPatternLogic.isRodForPreview(lx - insetXZ, ly - 1, lz - insetXZ,
+                                && isRodAt(builder, lx - insetXZ, ly - 1, lz - insetXZ,
                                 rw, RodPatternLogic.rodSpaceHeight(h, builder.getPatternMode()), rd, pattern, expansionRodAtCenter);
                         if (isRodPos) {
                             if (hasBlock && !blockState.is(ModBlocks.REACTOR_ROD.get())) return true;
@@ -94,11 +95,47 @@ public final class ReactorBuildLogic {
         return false;
     }
 
-    private static boolean isRodControllerPos(int x, int z, int minX, int minZ, int maxY, int insetXZ, int rw, int rd, int pattern, boolean expansionRodAtCenter) {
+    private static boolean isRodControllerPos(ReactorBuilderBlockEntity builder, int x, int z, int minX, int minZ,
+                                              int insetXZ, int rw, int rd, int pattern, boolean expansionRodAtCenter) {
         int rx = x - minX - insetXZ;
         int rz = z - minZ - insetXZ;
         if (rx < 0 || rx >= rw || rz < 0 || rz >= rd) return false;
+        return isRodColumn(builder, rx, rz, rw, rd, pattern, expansionRodAtCenter);
+    }
+
+    /** True when rod/controller stages should be skipped. */
+    private static boolean skipsRodContents(ReactorBuilderBlockEntity builder, int pattern) {
+        if (pattern == RodPatternLogic.PATTERN_NONE || pattern == RodPatternLogic.PATTERN_CUSTOM) {
+            return true;
+        }
+        if (pattern == RodPatternLogic.PATTERN_WEBSITE) {
+            return !builder.hasValidWebsiteDesign();
+        }
+        return false;
+    }
+
+    private static boolean isRodColumn(ReactorBuilderBlockEntity builder, int rx, int rz, int rw, int rd,
+                                       int pattern, boolean expansionRodAtCenter) {
+        if (pattern == RodPatternLogic.PATTERN_WEBSITE) {
+            return builder.hasValidWebsiteDesign() && builder.websiteIsRodColumn(rx, rz);
+        }
         return RodPatternLogic.isRodColumnForPreview(rx, rz, rw, rd, pattern, expansionRodAtCenter);
+    }
+
+    private static boolean isRodAt(ReactorBuilderBlockEntity builder, int rx, int ry, int rz, int rw, int rh, int rd,
+                                   int pattern, boolean expansionRodAtCenter) {
+        if (rw <= 0 || rh <= 0 || rd <= 0) return false;
+        if (rx < 0 || rx >= rw || ry < 0 || ry >= rh || rz < 0 || rz >= rd) return false;
+        return isRodColumn(builder, rx, rz, rw, rd, pattern, expansionRodAtCenter);
+    }
+
+    /** Website air cells stay empty; other patterns never skip for air. */
+    private static boolean isWebsiteAirCell(ReactorBuilderBlockEntity builder, int pattern, int rx, int rz) {
+        if (pattern != RodPatternLogic.PATTERN_WEBSITE || !builder.hasValidWebsiteDesign()) {
+            return false;
+        }
+        String cell = builder.getWebsiteCell(rx, rz);
+        return cell == null || "air".equals(cell);
     }
 
     /**
@@ -165,7 +202,7 @@ public final class ReactorBuildLogic {
                 continue;
             }
             if (stage == STAGE_ROD_CONTROLLERS) {
-                if (pattern == RodPatternLogic.PATTERN_NONE || pattern == RodPatternLogic.PATTERN_CUSTOM) {
+                if (skipsRodContents(builder, pattern)) {
                     builder.setBuildStage(STAGE_LIQUIDS);
                     builder.setBuildLiquidCursor(Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE);
                     builder.setChanged();
@@ -178,7 +215,7 @@ public final class ReactorBuildLogic {
                 continue;
             }
             if (stage == STAGE_RODS) {
-                if (pattern == RodPatternLogic.PATTERN_NONE || pattern == RodPatternLogic.PATTERN_CUSTOM) {
+                if (skipsRodContents(builder, pattern)) {
                     builder.setBuildStage(STAGE_LIQUIDS);
                     builder.setBuildLiquidCursor(Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE);
                     builder.setChanged();
@@ -246,7 +283,7 @@ public final class ReactorBuildLogic {
                         builder.setBuildFrameCursor(xx, yy, zz + 1);
                         continue;
                     }
-                    if (yy == maxY && isRodControllerPos(xx, zz, minX, minZ, maxY, insetXZ, rw, rd, pattern, expansionRodAtCenter)) {
+                    if (yy == maxY && isRodControllerPos(builder, xx, zz, minX, minZ, insetXZ, rw, rd, pattern, expansionRodAtCenter)) {
                         builder.setBuildFrameCursor(xx, yy, zz + 1);
                         continue; // reserve for rod controller
                     }
@@ -289,7 +326,7 @@ public final class ReactorBuildLogic {
             int rzStart = (rx == rx0) ? rz0 : 0;
             for (int rz = rzStart; rz < rd; rz++) {
                 builder.setBuildRodCtrlCursor(rx, rz + 1);
-                if (!RodPatternLogic.isRodColumnForPreview(rx, rz, rw, rd, pattern, expansionRodAtCenter)) continue;
+                if (!isRodColumn(builder, rx, rz, rw, rd, pattern, expansionRodAtCenter)) continue;
                 BlockPos pos = new BlockPos(minX + insetXZ + rx, rodControllerY, minZ + insetXZ + rz);
                 if (!canReplace(level, pos)) continue;
                 ItemStack rodCtrl = findRodController(builder);
@@ -321,7 +358,7 @@ public final class ReactorBuildLogic {
                 for (int lz = lzStart; lz < d - insetXZ; lz++) {
                     builder.setBuildRodCursor(lx, ly, lz + 1);
                     int rx = lx - insetXZ, ry = ly - 1, rz = lz - insetXZ;
-                    if (!RodPatternLogic.isRodForPreview(rx, ry, rz, rw, rh, rd, pattern, expansionRodAtCenter)) continue;
+                    if (!isRodAt(builder, rx, ry, rz, rw, rh, rd, pattern, expansionRodAtCenter)) continue;
                     BlockPos pos = new BlockPos(minX + lx, minY + ly, minZ + lz);
                     if (!canReplace(level, pos)) continue;
                     ItemStack rod = findRod(builder);
@@ -357,11 +394,17 @@ public final class ReactorBuildLogic {
                 int lzStart = (ly == ly0 && lx == lxStart) ? lz0 : 1;
                 for (int lz = lzStart; lz < d - 1; lz++) {
                     builder.setBuildLiquidCursor(lx, ly, lz + 1);
-                    if (isInteriorCellRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) continue;
-                    if (pattern != RodPatternLogic.PATTERN_CUSTOM) {
+                    if (isInteriorCellRod(builder, lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) continue;
+                    if (pattern == RodPatternLogic.PATTERN_WEBSITE) {
+                        int rx = lx - insetXZ, rz = lz - insetXZ;
+                        if (lx < insetXZ || lx >= w - insetXZ || lz < insetXZ || lz >= d - insetXZ
+                                || isWebsiteAirCell(builder, pattern, rx, rz)) {
+                            continue;
+                        }
+                    } else if (pattern != RodPatternLogic.PATTERN_CUSTOM) {
                         if (patternMode == RodPatternLogic.MODE_SUPER_ECONOMY) {
-                            if (!isInRodSpace(lx, ly, lz, w, h, d, insetXZ) || !isRodSpaceCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) continue;
-                        } else if (patternMode == RodPatternLogic.MODE_ECONOMY && !isInteriorCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) continue;
+                            if (!isInRodSpace(lx, ly, lz, w, h, d, insetXZ) || !isRodSpaceCellAdjacentToRod(builder, lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) continue;
+                        } else if (patternMode == RodPatternLogic.MODE_ECONOMY && !isInteriorCellAdjacentToRod(builder, lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) continue;
                     }
                     Fluid fluid = builder.getFluidTank().getFluid().getFluid();
                     if (fluid == null || fluid == Fluids.EMPTY
@@ -412,11 +455,17 @@ public final class ReactorBuildLogic {
                 int lzStart = (ly == ly0 && lx == lxStart) ? lz0 : 1;
                 for (int lz = lzStart; lz < d - 1; lz++) {
                     builder.setBuildHeatCursor(lx, ly, lz + 1);
-                    if (isInteriorCellRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) continue;
-                    if (pattern != RodPatternLogic.PATTERN_CUSTOM) {
+                    if (isInteriorCellRod(builder, lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) continue;
+                    if (pattern == RodPatternLogic.PATTERN_WEBSITE) {
+                        int rx = lx - insetXZ, rz = lz - insetXZ;
+                        if (lx < insetXZ || lx >= w - insetXZ || lz < insetXZ || lz >= d - insetXZ
+                                || isWebsiteAirCell(builder, pattern, rx, rz)) {
+                            continue;
+                        }
+                    } else if (pattern != RodPatternLogic.PATTERN_CUSTOM) {
                         if (patternMode == RodPatternLogic.MODE_SUPER_ECONOMY) {
-                            if (!isInRodSpace(lx, ly, lz, w, h, d, insetXZ) || !isRodSpaceCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) continue;
-                        } else if (patternMode == RodPatternLogic.MODE_ECONOMY && !isInteriorCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) continue;
+                            if (!isInRodSpace(lx, ly, lz, w, h, d, insetXZ) || !isRodSpaceCellAdjacentToRod(builder, lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) continue;
+                        } else if (patternMode == RodPatternLogic.MODE_ECONOMY && !isInteriorCellAdjacentToRod(builder, lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) continue;
                     }
                     BlockPos pos = new BlockPos(minX + lx, minY + ly, minZ + lz);
                     if (!canReplaceForSolidBlock(level, pos)) continue;
@@ -440,42 +489,45 @@ public final class ReactorBuildLogic {
     }
 
     /** True if (lx, ly, lz) lies inside rod space and is a rod position. Used to skip rod cells when placing coolant in full interior. */
-    private static boolean isInteriorCellRod(int lx, int ly, int lz, int w, int h, int d, int insetXZ, int rw, int rh, int rd, int pattern, boolean expansionRodAtCenter) {
+    private static boolean isInteriorCellRod(ReactorBuilderBlockEntity builder, int lx, int ly, int lz, int w, int h, int d,
+                                             int insetXZ, int rw, int rh, int rd, int pattern, boolean expansionRodAtCenter) {
         if (!isInRodSpace(lx, ly, lz, w, h, d, insetXZ)) return false;
         int rx = lx - insetXZ, ry = ly - 1, rz = lz - insetXZ;
-        return RodPatternLogic.isRodForPreview(rx, ry, rz, rw, rh, rd, pattern, expansionRodAtCenter);
+        return isRodAt(builder, rx, ry, rz, rw, rh, rd, pattern, expansionRodAtCenter);
     }
 
     /** True if cell (lx, ly, lz) has at least one neighbor in rod space (6 directions) that is a rod. Used for Super Economy (coolant only in rod space, only adjacent to rods). */
-    private static boolean isRodSpaceCellAdjacentToRod(int lx, int ly, int lz, int w, int h, int d, int insetXZ, int rw, int rh, int rd, int pattern, boolean expansionRodAtCenter) {
+    private static boolean isRodSpaceCellAdjacentToRod(ReactorBuilderBlockEntity builder, int lx, int ly, int lz, int w, int h, int d,
+                                                       int insetXZ, int rw, int rh, int rd, int pattern, boolean expansionRodAtCenter) {
         for (int dx = -1; dx <= 1; dx += 2) {
             int nx = lx + dx;
-            if (nx >= insetXZ && nx < w - insetXZ && isInteriorCellRod(nx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) return true;
+            if (nx >= insetXZ && nx < w - insetXZ && isInteriorCellRod(builder, nx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) return true;
         }
         for (int dy = -1; dy <= 1; dy += 2) {
             int ny = ly + dy;
-            if (ny >= 1 && ny < h - 1 && isInteriorCellRod(lx, ny, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) return true;
+            if (ny >= 1 && ny < h - 1 && isInteriorCellRod(builder, lx, ny, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) return true;
         }
         for (int dz = -1; dz <= 1; dz += 2) {
             int nz = lz + dz;
-            if (nz >= insetXZ && nz < d - insetXZ && isInteriorCellRod(lx, ly, nz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) return true;
+            if (nz >= insetXZ && nz < d - insetXZ && isInteriorCellRod(builder, lx, ly, nz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) return true;
         }
         return false;
     }
 
     /** True if interior cell (lx, ly, lz) has at least one neighbor (6 directions) that is a rod. Used for Economy mode (coolant only on sides of rods). Neighbors evaluated in full interior. */
-    private static boolean isInteriorCellAdjacentToRod(int lx, int ly, int lz, int w, int h, int d, int insetXZ, int rw, int rh, int rd, int pattern, boolean expansionRodAtCenter) {
+    private static boolean isInteriorCellAdjacentToRod(ReactorBuilderBlockEntity builder, int lx, int ly, int lz, int w, int h, int d,
+                                                       int insetXZ, int rw, int rh, int rd, int pattern, boolean expansionRodAtCenter) {
         for (int dx = -1; dx <= 1; dx += 2) {
             int nx = lx + dx;
-            if (nx >= 1 && nx < w - 1 && isInteriorCellRod(nx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) return true;
+            if (nx >= 1 && nx < w - 1 && isInteriorCellRod(builder, nx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) return true;
         }
         for (int dy = -1; dy <= 1; dy += 2) {
             int ny = ly + dy;
-            if (ny >= 1 && ny < h - 1 && isInteriorCellRod(lx, ny, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) return true;
+            if (ny >= 1 && ny < h - 1 && isInteriorCellRod(builder, lx, ny, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) return true;
         }
         for (int dz = -1; dz <= 1; dz += 2) {
             int nz = lz + dz;
-            if (nz >= 1 && nz < d - 1 && isInteriorCellRod(lx, ly, nz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) return true;
+            if (nz >= 1 && nz < d - 1 && isInteriorCellRod(builder, lx, ly, nz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) return true;
         }
         return false;
     }
@@ -711,7 +763,8 @@ public final class ReactorBuildLogic {
                     if (!onBorder) {
                         continue;
                     }
-                    if (ly == maxYLocal && isRodControllerLocal(lx, lz, insetXZ, rw, rd, pattern, expansionRodAtCenter)) {
+                    if (ly == maxYLocal && isRodColumn(builder, lx - insetXZ, lz - insetXZ, rw, rd, pattern, expansionRodAtCenter)
+                            && lx >= insetXZ && lx < w - insetXZ && lz >= insetXZ && lz < d - insetXZ) {
                         continue;
                     }
                     BlockState state = level.getBlockState(new BlockPos(minX + lx, minY + ly, minZ + lz));
@@ -725,7 +778,7 @@ public final class ReactorBuildLogic {
         int rodControllerY = maxY;
         for (int rx = 0; rx < rw; rx++) {
             for (int rz = 0; rz < rd; rz++) {
-                if (!RodPatternLogic.isRodColumnForPreview(rx, rz, rw, rd, pattern, expansionRodAtCenter)) {
+                if (!isRodColumn(builder, rx, rz, rw, rd, pattern, expansionRodAtCenter)) {
                     continue;
                 }
                 BlockPos pos = new BlockPos(minX + insetXZ + rx, rodControllerY, minZ + insetXZ + rz);
@@ -741,7 +794,7 @@ public final class ReactorBuildLogic {
                     int rx = lx - insetXZ;
                     int ry = ly - 1;
                     int rz = lz - insetXZ;
-                    if (!RodPatternLogic.isRodForPreview(rx, ry, rz, rw, rh, rd, pattern, expansionRodAtCenter)) {
+                    if (!isRodAt(builder, rx, ry, rz, rw, rh, rd, pattern, expansionRodAtCenter)) {
                         continue;
                     }
                     if (level.getBlockState(new BlockPos(minX + lx, minY + ly, minZ + lz)).is(ModBlocks.REACTOR_ROD.get())) {
@@ -757,17 +810,23 @@ public final class ReactorBuildLogic {
             for (int ly = 1; ly < h - 1; ly++) {
                 for (int lx = 1; lx < w - 1; lx++) {
                     for (int lz = 1; lz < d - 1; lz++) {
-                        if (isInteriorCellRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) {
+                        if (isInteriorCellRod(builder, lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) {
                             continue;
                         }
-                        if (pattern != RodPatternLogic.PATTERN_CUSTOM) {
+                        if (pattern == RodPatternLogic.PATTERN_WEBSITE) {
+                            int rx = lx - insetXZ, rz = lz - insetXZ;
+                            if (lx < insetXZ || lx >= w - insetXZ || lz < insetXZ || lz >= d - insetXZ
+                                    || isWebsiteAirCell(builder, pattern, rx, rz)) {
+                                continue;
+                            }
+                        } else if (pattern != RodPatternLogic.PATTERN_CUSTOM) {
                             if (patternMode == RodPatternLogic.MODE_SUPER_ECONOMY) {
                                 if (!isInRodSpace(lx, ly, lz, w, h, d, insetXZ)
-                                        || !isRodSpaceCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) {
+                                        || !isRodSpaceCellAdjacentToRod(builder, lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) {
                                     continue;
                                 }
                             } else if (patternMode == RodPatternLogic.MODE_ECONOMY
-                                    && !isInteriorCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) {
+                                    && !isInteriorCellAdjacentToRod(builder, lx, ly, lz, w, h, d, insetXZ, rw, rh, rd, pattern, expansionRodAtCenter)) {
                                 continue;
                             }
                         }
@@ -799,14 +858,5 @@ public final class ReactorBuildLogic {
             return false;
         }
         return HeatSinkLoader.isBlockMatchingSelectedHeatSink(state, heatSinkIndex, registryAccess);
-    }
-
-    private static boolean isRodControllerLocal(int lx, int lz, int insetXZ, int rw, int rd, int pattern, boolean expansionRodAtCenter) {
-        int rx = lx - insetXZ;
-        int rz = lz - insetXZ;
-        if (rx < 0 || rx >= rw || rz < 0 || rz >= rd) {
-            return false;
-        }
-        return RodPatternLogic.isRodColumnForPreview(rx, rz, rw, rd, pattern, expansionRodAtCenter);
     }
 }

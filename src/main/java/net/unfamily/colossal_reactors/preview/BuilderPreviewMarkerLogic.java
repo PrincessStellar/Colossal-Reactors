@@ -79,7 +79,7 @@ public final class BuilderPreviewMarkerLogic {
                     int rx = lx - insetXZ;
                     int ry = ly - 1;
                     int rz = lz - insetXZ;
-                    if (RodPatternLogic.isRodForPreview(rx, ry, rz, rw, rh, rd, pattern, expansionRodAtCenter)) {
+                    if (isReactorRodColumn(builder, rx, rz, rw, rd, pattern, expansionRodAtCenter)) {
                         sink.accept(new BlockPos(minX + lx, minY + ly, minZ + lz), COLOR_ROD);
                     }
                 }
@@ -89,7 +89,7 @@ public final class BuilderPreviewMarkerLogic {
         int rodControllerY = minY + h - 1;
         for (int rx = 0; rx < rw; rx++) {
             for (int rz = 0; rz < rd; rz++) {
-                if (RodPatternLogic.isRodColumnForPreview(rx, rz, rw, rd, pattern, expansionRodAtCenter)) {
+                if (isReactorRodColumn(builder, rx, rz, rw, rd, pattern, expansionRodAtCenter)) {
                     BlockPos ctrlPos = new BlockPos(minX + insetXZ + rx, rodControllerY, minZ + insetXZ + rz);
                     emitReactorRodController(level, sink, ctrlPos);
                 }
@@ -114,7 +114,7 @@ public final class BuilderPreviewMarkerLogic {
                     if (onBorder) {
                         boolean validFrame = ReactorValidation.isShellBlock(blockState)
                                 || (blockState.is(ModBlocks.ROD_CONTROLLER.get()) && y == maxY
-                                && isReactorRodControllerPosition(x, z, minX, minZ, insetXZ, rw, rd, pattern, expansionRodAtCenter));
+                                && isReactorRodColumn(builder, x - minX - insetXZ, z - minZ - insetXZ, rw, rd, pattern, expansionRodAtCenter));
                         if (hasBlock && !validFrame) {
                             sink.accept(pos, COLOR_OCCUPIED);
                             if (onEdge) {
@@ -125,7 +125,7 @@ public final class BuilderPreviewMarkerLogic {
                         }
                     } else {
                         boolean isRodPos = (lx >= insetXZ && lx < w - insetXZ && ly >= 1 && ly < h - 1 && lz >= insetXZ && lz < d - insetXZ)
-                                && RodPatternLogic.isRodForPreview(lx - insetXZ, ly - 1, lz - insetXZ, rw, rh, rd, pattern, expansionRodAtCenter);
+                                && isReactorRodColumn(builder, lx - insetXZ, lz - insetXZ, rw, rd, pattern, expansionRodAtCenter);
                         if (isRodPos) {
                             if (hasBlock && !blockState.is(ModBlocks.REACTOR_ROD.get())) {
                                 sink.accept(pos, COLOR_OCCUPIED);
@@ -194,7 +194,7 @@ public final class BuilderPreviewMarkerLogic {
                     if (rx < 0 || rx >= rw || rz < 0 || rz >= rd) {
                         continue;
                     }
-                    if (TurbineRodPatternLogic.isRodColumn(rx, rz, rw, rd, pattern)) {
+                    if (isTurbineRodColumn(builder, rx, rz, rw, rd, pattern)) {
                         sink.accept(new BlockPos(wx, wy, wz), COLOR_ROD);
                     }
                 }
@@ -236,7 +236,7 @@ public final class BuilderPreviewMarkerLogic {
                         int rx = layout.crossAFromWorld(x, y, z);
                         int rz = layout.crossBFromWorld(x, y, z);
                         boolean isRodCol = rx >= 0 && rx < rw && rz >= 0 && rz < rd
-                                && TurbineRodPatternLogic.isRodColumn(rx, rz, rw, rd, pattern);
+                                && isTurbineRodColumn(builder, rx, rz, rw, rd, pattern);
                         if (isRodCol) {
                             if (hasBlock && !blockState.is(ModBlocks.TURBINE_ROD.get())
                                     && !blockState.is(ModBlocks.TURBINE_BLADE.get())) {
@@ -286,13 +286,22 @@ public final class BuilderPreviewMarkerLogic {
         return !state.isAir() && !state.canBeReplaced();
     }
 
-    private static boolean isReactorRodControllerPosition(int x, int z, int minX, int minZ, int insetXZ,
-                                                           int rw, int rd, int pattern, boolean expansionRodAtCenter) {
-        int rx = x - minX - insetXZ;
-        int rz = z - minZ - insetXZ;
-        if (rx < 0 || rx >= rw || rz < 0 || rz >= rd) {
+    private static boolean isReactorRodColumn(ReactorBuilderBlockEntity builder, int rx, int rz, int rw, int rd,
+                                              int pattern, boolean expansionRodAtCenter) {
+        if (rx < 0 || rz < 0 || rx >= rw || rz >= rd) {
             return false;
         }
+        if (pattern == RodPatternLogic.PATTERN_WEBSITE) {
+            return builder.hasValidWebsiteDesign() && builder.websiteIsRodColumn(rx, rz);
+        }
         return RodPatternLogic.isRodColumnForPreview(rx, rz, rw, rd, pattern, expansionRodAtCenter);
+    }
+
+    private static boolean isTurbineRodColumn(TurbineBuilderBlockEntity builder, int rx, int rz, int rw, int rd, int pattern) {
+        java.util.function.BiPredicate<Integer, Integer> override = null;
+        if (pattern == TurbineRodPatternLogic.PATTERN_WEBSITE && builder.hasValidWebsiteDesign()) {
+            override = builder::websiteIsRodColumn;
+        }
+        return TurbineRodPatternLogic.isRodColumn(rx, rz, rw, rd, pattern, override);
     }
 }

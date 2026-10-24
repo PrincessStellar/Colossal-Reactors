@@ -148,9 +148,32 @@ public class FuelLoader {
                 wasteId = parsed;
             }
         }
+        Integer colorRgb = parseColorRgb(json);
         return new FuelDefinition(fuelId, wasteId, subType,
                 inputs.isEmpty() ? List.of(fuelId.toString()) : List.copyOf(inputs),
-                consume, output, produce, unitsPerFuel, unitsPerWaste, baseRf, baseFuelUnitsPerTick, overwritable);
+                consume, output, produce, unitsPerFuel, unitsPerWaste, baseRf, baseFuelUnitsPerTick, overwritable, colorRgb);
+    }
+
+    private static final String KEY_COLOR = "color";
+
+    /** Parses optional {@code "color": "#RRGGBB"} or {@code 0xRRGGBB}. */
+    private static Integer parseColorRgb(JsonObject json) {
+        if (!json.has(KEY_COLOR) || !json.get(KEY_COLOR).isJsonPrimitive()) {
+            return null;
+        }
+        String raw = json.get(KEY_COLOR).getAsString().trim();
+        if (raw.startsWith("#")) {
+            raw = raw.substring(1);
+        } else if (raw.startsWith("0x") || raw.startsWith("0X")) {
+            raw = raw.substring(2);
+        }
+        try {
+            int rgb = Integer.parseInt(raw, 16);
+            return rgb & 0xFFFFFF;
+        } catch (NumberFormatException e) {
+            LOGGER.warn("Invalid fuel color '{}'", raw);
+            return null;
+        }
     }
 
     private static void processEntry(FuelDefinition def) {

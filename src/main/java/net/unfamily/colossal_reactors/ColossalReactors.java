@@ -230,6 +230,7 @@ public class ColossalReactors {
 
     private void commonSetup(FMLCommonSetupEvent event) {
         NeoForge.EVENT_BUS.register(BuilderPreviewServerEvents.class);
+        net.unfamily.colossal_reactors.config.ColossalAcmRules.register();
         LOGGER.debug("Colossal Reactors common setup");
         LOGGER.info("Reactor validation debug (dev.001_reactor_validation_debug): {}", Config.REACTOR_VALIDATION_DEBUG.get());
         LOGGER.info("Reactor simulation debug (dev.002_reactor_simulation_debug): {}", Config.REACTOR_SIMULATION_DEBUG.get());
@@ -274,6 +275,11 @@ public class ColossalReactors {
         @SubscribeEvent
         static void registerTurbineBer(EntityRenderersEvent.RegisterRenderers event) {
             TurbineRotorClientRegistration.registerRenderers(event);
+        }
+
+        @SubscribeEvent
+        static void registerBlockColors(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Block event) {
+            net.unfamily.colossal_reactors.client.ReactorRodColors.register(event);
         }
 
         @SubscribeEvent

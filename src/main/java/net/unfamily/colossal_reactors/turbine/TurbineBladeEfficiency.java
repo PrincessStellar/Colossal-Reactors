@@ -16,6 +16,9 @@ import java.util.List;
  */
 public final class TurbineBladeEfficiency {
 
+    /** Applied when at least one rod column has no rod controller on the closure deck. */
+    public static final double MISSING_ROD_CONTROLLER_MULTIPLIER = 0.95;
+
     private TurbineBladeEfficiency() {}
 
     /**
@@ -55,7 +58,40 @@ public final class TurbineBladeEfficiency {
      */
     public static double computeFromRotorLayout(Level level, TurbineRotorLayout layout,
             int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
-        return computeMultiplier(collectRodZoneLayerBladeCounts(level, layout, minX, minY, minZ, maxX, maxY, maxZ));
+        double mult = computeMultiplier(collectRodZoneLayerBladeCounts(level, layout, minX, minY, minZ, maxX, maxY, maxZ));
+        if (hasRodColumnMissingController(level, layout)) {
+            mult *= MISSING_ROD_CONTROLLER_MULTIPLIER;
+        }
+        return mult;
+    }
+
+    /**
+     * True when any rod column (full height under the closure deck) lacks a turbine rod controller on the deck.
+     */
+    public static boolean hasRodColumnMissingController(Level level, TurbineRotorLayout layout) {
+        int layers = layout.closureInteriorIndex();
+        if (layers <= 0) {
+            return false;
+        }
+        for (int ca = 0; ca < layout.crossSizeA(); ca++) {
+            for (int cb = 0; cb < layout.crossSizeB(); cb++) {
+                boolean hasRod = false;
+                for (int layer = 0; layer < layers; layer++) {
+                    if (level.getBlockState(layout.rodPos(layer, ca, cb)).is(ModBlocks.TURBINE_ROD.get())) {
+                        hasRod = true;
+                        break;
+                    }
+                }
+                if (!hasRod) {
+                    continue;
+                }
+                BlockPos ctrl = layout.controllerPos(new TurbineRodControllerLayout.Center(ca, cb));
+                if (!level.getBlockState(ctrl).is(ModBlocks.TURBINE_ROD_CONTROLLER.get())) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public static List<Integer> collectRodZoneLayerBladeCounts(Level level, TurbineRotorLayout layout,

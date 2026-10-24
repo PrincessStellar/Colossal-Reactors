@@ -74,10 +74,8 @@ public final class TurbineBuildMaterialCounter {
             }
         }
         boolean skipRotor = TurbineRodPatternLogic.skipsRotorContents(rodPattern);
-        int closureDeckCasings = skipRotor
-                ? Math.max(0, rw * rd)
-                : Math.max(0, rw * rd - ((rw > 0 && rd > 0) ? 1 : 0));
-        int rodControllers = (!skipRotor && rw > 0 && rd > 0) ? 1 : 0;
+        int rodControllers = skipRotor ? 0 : TurbineRodPatternLogic.rodColumns(rw, rd, rodPattern).size();
+        int closureDeckCasings = Math.max(0, rw * rd - rodControllers);
 
         return new BuildMaterialCounts(
                 frameCasings, faceCasings, closureDeckCasings,

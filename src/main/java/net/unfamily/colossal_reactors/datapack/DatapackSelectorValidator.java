@@ -221,7 +221,7 @@ public final class DatapackSelectorValidator {
         }
         return new FuelDefinition(def.fuelId(), def.wasteId(), normalizedSub, inputs,
                 def.consume(), output, def.produce(), def.unitsPerFuel(), def.unitsPerWaste(),
-                def.baseRfPerTick(), def.baseFuelUnitsPerTick(), def.overwritable());
+                def.baseRfPerTick(), def.baseFuelUnitsPerTick(), def.overwritable(), def.colorRgb());
     }
 
     @Nullable

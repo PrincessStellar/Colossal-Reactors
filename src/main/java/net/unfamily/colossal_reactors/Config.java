@@ -2,6 +2,8 @@ package net.unfamily.colossal_reactors;
 
 import net.neoforged.neoforge.common.ModConfigSpec;
 
+import java.util.List;
+
 public class Config {
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
@@ -331,8 +333,8 @@ public class Config {
             .comment("Fallback RF per mB steam when datapack entry is missing. Default: 4")
             .defineInRange("000_defaultRfPerSteamMb", 4.0, 0.0, Double.MAX_VALUE);
     public static final ModConfigSpec.IntValue TURBINE_DEFAULT_COIL_LAYER_COUNT = BUILDER
-            .comment("Default coil-layer setting in turbine builder (GUI shows this + 1). Default: 1 (= 2 layers in GUI)")
-            .defineInRange("001_defaultCoilLayerCount", 1, 0, 32);
+            .comment("Default coil-layer count in turbine builder (applied as-is). Default: 1")
+            .defineInRange("001_defaultCoilLayerCount", 1, 1, 32);
 
     static {
         BUILDER.pop();
@@ -496,6 +498,62 @@ public class Config {
 
     static {
         BUILDER.pop(); // evil_things
+    }
+
+    // ========== website (ModDecoded seed material maps) ==========
+    static {
+        BUILDER.comment(
+                "ModDecoded website design seed material maps (CSV rows: datapack_selector;website_id).",
+                "Edited as a spreadsheet in Another Config Manager. Unknown website ids fall back to the first non-air material.")
+                .push("website");
+    }
+
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> WEBSITE_COIL_SELECTOR_MAP = BUILDER
+            .comment(
+                    "Turbine elec-coil map: datapack selector → ModDecoded coil token.",
+                    "Example: #c:storage_blocks/copper_all;copper")
+            .defineList("000_coil_selector_map", List.of(
+                    "minecraft:air;air",
+                    "#c:storage_blocks/graphite;graphite",
+                    "#c:storage_blocks/iron;iron",
+                    "#c:storage_blocks/tin;tin",
+                    "#c:storage_blocks/nickel;nickel",
+                    "#c:storage_blocks/aluminum;aluminum",
+                    "#c:storage_blocks/copper_all;copper",
+                    "#c:storage_blocks/bronze;bronze",
+                    "#c:storage_blocks/constantan;constantan",
+                    "#c:storage_blocks/silver;silver",
+                    "#c:storage_blocks/gold;gold",
+                    "#c:storage_blocks/electrum;electrum",
+                    "#c:storage_blocks/netherite;netherite"
+            ), obj -> obj instanceof String);
+
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> WEBSITE_HEATSINK_SELECTOR_MAP = BUILDER
+            .comment(
+                    "Reactor heat-sink map: datapack selector/hint → ModDecoded sink token.",
+                    "Example: ender_molten;ender_goo")
+            .defineList("001_heatsink_selector_map", List.of(
+                    "minecraft:air;air",
+                    "water;water",
+                    "gold;gold",
+                    "ruby;ruby",
+                    "sapphire;sapphire",
+                    "diamond;diamond",
+                    "emerald;emerald",
+                    "peridot;peridot",
+                    "netherite;netherite",
+                    "graphite;graphite",
+                    "ice;ice",
+                    "ender_molten;ender_goo",
+                    "industrial_coolant;industrial_coolant",
+                    "breezium;gelid_breezium",
+                    "adamantite;adamantite",
+                    "aeternium;aeternium",
+                    "aurichalcum;aurichalcum"
+            ), obj -> obj instanceof String);
+
+    static {
+        BUILDER.pop(); // website
     }
 
     static final ModConfigSpec SPEC = BUILDER.build();

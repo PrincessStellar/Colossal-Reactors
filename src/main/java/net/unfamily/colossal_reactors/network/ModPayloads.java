@@ -97,6 +97,11 @@ public class ModPayloads {
                 ReactorBuilderMarkInputPayload::handle
         );
         registrar.playToServer(
+                ReactorBuilderWebsiteDesignPayload.TYPE,
+                ReactorBuilderWebsiteDesignPayload.STREAM_CODEC,
+                ReactorBuilderWebsiteDesignPayload::handle
+        );
+        registrar.playToServer(
                 FluidTankDumpPayload.TYPE,
                 FluidTankDumpPayload.STREAM_CODEC,
                 FluidTankDumpPayload::handle
@@ -135,6 +140,11 @@ public class ModPayloads {
                 TurbineBuilderMarkInputPayload.TYPE,
                 TurbineBuilderMarkInputPayload.STREAM_CODEC,
                 TurbineBuilderMarkInputPayload::handle
+        );
+        registrar.playToServer(
+                TurbineBuilderWebsiteDesignPayload.TYPE,
+                TurbineBuilderWebsiteDesignPayload.STREAM_CODEC,
+                TurbineBuilderWebsiteDesignPayload::handle
         );
         registrar.playToClient(
                 ClearPreviewPayload.TYPE,

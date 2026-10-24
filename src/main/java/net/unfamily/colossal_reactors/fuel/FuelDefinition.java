@@ -19,8 +19,26 @@ public record FuelDefinition(
         int unitsPerWaste,
         double baseRfPerTick,
         double baseFuelUnitsPerTick,
-        boolean overwritable
+        boolean overwritable,
+        /** Optional RGB fill tint (0xRRGGBB); null uses client fallback. */
+        Integer colorRgb
 ) {
+    public FuelDefinition(
+            ResourceLocation fuelId,
+            ResourceLocation wasteId,
+            String subType,
+            List<String> inputs,
+            int consume,
+            String output,
+            int produce,
+            int unitsPerFuel,
+            int unitsPerWaste,
+            double baseRfPerTick,
+            double baseFuelUnitsPerTick,
+            boolean overwritable) {
+        this(fuelId, wasteId, subType, inputs, consume, output, produce, unitsPerFuel, unitsPerWaste,
+                baseRfPerTick, baseFuelUnitsPerTick, overwritable, null);
+    }
     public static final String SUBTYPE_ITEM_ITEM = "item-item";
     public static final String SUBTYPE_FLUID_FLUID = "fluid-fluid";
     public static final String SUBTYPE_CHEMICAL_CHEMICAL = "chemical-chemical";
@@ -109,14 +127,18 @@ public record FuelDefinition(
 
     /**
      * Waste buffer units from burned fuel units.
-     * Matches {@code input_mB = fuel_units × consume / units_per_fuel} then
-     * {@code waste_units = input_mB × units_per_waste / produce}.
+     * {@code inputAmount = fuel_units × consume / units_per_fuel}.
+     * Item output: {@code waste_units = inputAmount × units_per_waste} ({@code produce} is item count at eject).
+     * Fluid/chemical output: {@code waste_units = inputAmount × units_per_waste / produce} (mB scaling).
      */
     public float wasteUnitsFromFuelConsumed(float fuelUnitsConsumed) {
         if (unitsPerFuel <= 0 || produce <= 0) {
             return fuelUnitsConsumed;
         }
         float inputAmount = fuelUnitsConsumed * (float) consume / (float) unitsPerFuel;
+        if (outputMedium() == FuelMedium.ITEM) {
+            return inputAmount * (float) unitsPerWaste;
+        }
         return inputAmount * (float) unitsPerWaste / (float) produce;
     }
 

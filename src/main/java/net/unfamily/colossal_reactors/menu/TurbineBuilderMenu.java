@@ -19,7 +19,7 @@ import net.unfamily.colossal_reactors.blockentity.TurbineBuilderBlockEntity;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Menu for Reactor Builder GUI. Texture 230x240; all slot X positions +27px from left (buffer, player, hotbar).
+ * Menu for Turbine Builder GUI. Texture 230x270; buffer/player slots +20 vs 250-tall layout (warning gap).
  */
 public class TurbineBuilderMenu extends AbstractContainerMenu {
 
@@ -28,11 +28,11 @@ public class TurbineBuilderMenu extends AbstractContainerMenu {
     public static final int BUFFER_SLOTS = BUFFER_ROWS * BUFFER_COLS;
 
     private static final int BUFFER_X = 35;
-    private static final int BUFFER_Y = 92;
+    private static final int BUFFER_Y = 122;
 
     private static final int PLAYER_X = 35;
-    private static final int PLAYER_Y = 158;
-    private static final int HOTBAR_Y = 216;
+    private static final int PLAYER_Y = 188;
+    private static final int HOTBAR_Y = 246;
 
     private final ContainerLevelAccess levelAccess;
     private final ContainerData fluidData;

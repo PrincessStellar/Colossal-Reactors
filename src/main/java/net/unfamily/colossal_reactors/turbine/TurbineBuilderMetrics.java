@@ -136,17 +136,26 @@ public final class TurbineBuilderMetrics {
         int rd = layout.crossSizeB();
         boolean hasRodColumn = rw > 0 && rd > 0;
 
+        int rodsOnLayer = 0;
+        if (hasRodColumn) {
+            rodsOnLayer = TurbineRodPatternLogic.rodColumns(rw, rd, rodPattern).size();
+        }
         for (int t = 0; t < layout.rodExtent(); t++) {
-            int ring = TurbineBladePlacement.effectiveTargetBladeRing(layout, t, rodPattern);
-            int bladesPerRod = ring * 4;
-            int rodsOnLayer = hasRodColumn ? 1 : 0;
-            rodBlocks += rodsOnLayer;
-            int layerBlades = bladesPerRod * rodsOnLayer;
-            bladeItems += layerBlades;
-            if (!requireBalanced || bladesPerRod % 4 == 0) {
-                validBladeItems += layerBlades;
+            int maxBladesThisLayer = 0;
+            int layerBlades = 0;
+            for (TurbineRodControllerLayout.Center col : TurbineRodPatternLogic.rodColumns(rw, rd, rodPattern)) {
+                int ring = TurbineBladePlacement.effectiveTargetBladeRing(
+                        layout, t, rodPattern, col.rx(), col.rz());
+                int bladesPerRod = ring * 4;
+                maxBladesThisLayer = Math.max(maxBladesThisLayer, bladesPerRod);
+                layerBlades += bladesPerRod;
+                if (!requireBalanced || bladesPerRod % 4 == 0) {
+                    validBladeItems += bladesPerRod;
+                }
             }
-            layerMaxBladesPerRod.add(bladesPerRod);
+            rodBlocks += rodsOnLayer;
+            bladeItems += layerBlades;
+            layerMaxBladesPerRod.add(maxBladesThisLayer);
         }
 
         return new RodBladeCounts(rodBlocks, bladeItems, validBladeItems, layerMaxBladesPerRod);

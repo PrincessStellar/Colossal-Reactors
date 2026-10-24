@@ -25,13 +25,17 @@ public final class RodPatternLogic {
     /** Extra inset on X/Z for OPTIMIZED/ECONOMY mode: 1 more block each side. */
     private static final int MODE_INSET_XZ = 1;
 
-    public static final int PATTERN_DOTS = 0;
-    public static final int PATTERN_CHECKERBOARD = 1;
-    public static final int PATTERN_EXPANSION = 2;
+    /** External website design seed; no built-in rod columns until a seed is applied. */
+    public static final int PATTERN_WEBSITE = 0;
+    public static final int PATTERN_DOTS = 1;
+    public static final int PATTERN_CHECKERBOARD = 2;
+    public static final int PATTERN_EXPANSION = 3;
     /** No rods; heat sinks / liquids fill the full interior (ignores economy adjacency). */
-    public static final int PATTERN_CUSTOM = 3;
+    public static final int PATTERN_CUSTOM = 4;
     /** No rods and no heat sinks placed (empty interior / frame only). */
-    public static final int PATTERN_NONE = 4;
+    public static final int PATTERN_NONE = 5;
+
+    public static final int PATTERN_COUNT = 6;
 
     public static final int MODE_OPTIMIZED = 0;
     public static final int MODE_PRODUCTION = 1;
@@ -95,7 +99,7 @@ public final class RodPatternLogic {
             case PATTERN_DOTS -> isRodDotsColumn(rx, rz, rw, rd);
             case PATTERN_CHECKERBOARD -> isRodCheckerboardColumn(rx, rz, rw, rd);
             case PATTERN_EXPANSION -> isRodExpansionColumn(rx, rz, rw, rd, forPreview);
-            case PATTERN_CUSTOM, PATTERN_NONE -> false;
+            case PATTERN_WEBSITE, PATTERN_CUSTOM, PATTERN_NONE -> false;
             default -> false;
         };
     }

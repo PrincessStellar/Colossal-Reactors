@@ -28,9 +28,12 @@ public final class TurbineValidation {
         CONTROLLER_FACE_Y,
         TOO_LARGE,
         NO_ROD_CONTROLLER,
+        /** @deprecated Multiple aligned controllers are allowed; kept for old clients/messages. */
         MULTIPLE_ROD_CONTROLLERS,
+        ROD_CONTROLLER_NO_COLUMN,
         ROD_CONTROLLER_BORDER,
         ROD_CONTROLLER_FACING,
+        ROD_CONTROLLER_AXIS_MISMATCH,
         SHELL_GAP,
         ROD_IN_COIL_ZONE,
         COIL_ZONE_BLOCK,
@@ -215,25 +218,43 @@ public final class TurbineValidation {
                 minX, minY, minZ, maxX, maxY, maxZ, width, height, length, coilLayersUsed, provisionalAxis);
         report.plane(layout.closureCoord(), layout.coilStartInterior(), layout.closureInteriorIndex(), coilLayersUsed);
 
-        TurbineRodControllerLayout.Center rodCenter = layout.primaryCenter();
-        BlockPos primaryControllerPos = layout.controllerPos(rodCenter);
-        BlockState primaryController = level.getBlockState(primaryControllerPos);
-        if (!isRodController(primaryController)) {
-            return fail(FailureCode.NO_ROD_CONTROLLER, primaryControllerPos, report.build());
+        List<BlockPos> rodControllers = listRodControllers(level, minX, minY, minZ, maxX, maxY, maxZ);
+        report.rodControllersFound(rodControllers.size());
+        if (rodControllers.isEmpty()) {
+            return fail(FailureCode.NO_ROD_CONTROLLER, null, report.build());
         }
-        if (primaryController.hasProperty(TurbineRodControllerBlock.FACING)) {
-            provisionalAxis = primaryController.getValue(TurbineRodControllerBlock.FACING);
-        }
-        int otherControllers = countRodControllersExcept(level, minX, minY, minZ, maxX, maxY, maxZ, primaryControllerPos);
-        report.rodControllersFound(1 + otherControllers);
-        if (otherControllers > 0) {
-            return fail(FailureCode.MULTIPLE_ROD_CONTROLLERS, findExtraRodController(level, minX, minY, minZ, maxX, maxY, maxZ, primaryControllerPos), report.build());
-        }
-        if (xOnBorder(primaryControllerPos, minX, maxX, minY, maxY, minZ, maxZ)) {
-            return fail(FailureCode.ROD_CONTROLLER_BORDER, primaryControllerPos, report.build());
-        }
-
         Direction rotorAxis = provisionalAxis;
+        for (BlockPos ctrlPos : rodControllers) {
+            if (xOnBorder(ctrlPos, minX, maxX, minY, maxY, minZ, maxZ)) {
+                return fail(FailureCode.ROD_CONTROLLER_BORDER, ctrlPos, report.build());
+            }
+            BlockState ctrlState = level.getBlockState(ctrlPos);
+            if (!ctrlState.hasProperty(TurbineRodControllerBlock.FACING)) {
+                return fail(FailureCode.ROD_CONTROLLER_FACING, ctrlPos, report.build());
+            }
+            Direction facing = ctrlState.getValue(TurbineRodControllerBlock.FACING);
+            if (facing.getAxis() != rotorAxis.getAxis()) {
+                return fail(FailureCode.ROD_CONTROLLER_AXIS_MISMATCH, ctrlPos, report.build());
+            }
+            if (!layout.isClosureDeckWorld(ctrlPos.getX(), ctrlPos.getY(), ctrlPos.getZ())) {
+                return fail(FailureCode.ROD_CONTROLLER_NO_COLUMN, ctrlPos, report.build());
+            }
+            int ca = layout.crossAFromWorld(ctrlPos.getX(), ctrlPos.getY(), ctrlPos.getZ());
+            int cb = layout.crossBFromWorld(ctrlPos.getX(), ctrlPos.getY(), ctrlPos.getZ());
+            if (ca < 0 || cb < 0 || ca >= layout.crossSizeA() || cb >= layout.crossSizeB()) {
+                return fail(FailureCode.ROD_CONTROLLER_NO_COLUMN, ctrlPos, report.build());
+            }
+            boolean hasRodBelow = false;
+            for (int layer = 0; layer < layout.closureInteriorIndex(); layer++) {
+                if (level.getBlockState(layout.rodPos(layer, ca, cb)).is(ModBlocks.TURBINE_ROD.get())) {
+                    hasRodBelow = true;
+                    break;
+                }
+            }
+            if (!hasRodBelow) {
+                return fail(FailureCode.ROD_CONTROLLER_NO_COLUMN, ctrlPos, report.build());
+            }
+        }
         report.growthAxis(rotorAxis);
 
         int bladeCount = 0;
@@ -258,7 +279,7 @@ public final class TurbineValidation {
                             return fail(FailureCode.SHELL_GAP, p, report.build());
                         }
                     } else {
-                        boolean rodCtrlCell = layout.isRodControllerAt(x, y, z, rodCenter);
+                        boolean rodCtrlHere = isRodController(state);
                         if (state.is(ModBlocks.TURBINE_ROD.get())) {
                             if (layout.isCoilZoneWorld(x, y, z)) {
                                 return fail(FailureCode.ROD_IN_COIL_ZONE, p, report.build());
@@ -266,7 +287,7 @@ public final class TurbineValidation {
                         } else if (state.is(ModBlocks.TURBINE_BLADE.get())) {
                             bladeCount++;
                         } else if (layout.isClosureDeckWorld(x, y, z)) {
-                            if (!rodCtrlCell && !isShellBlock(state) && !state.isAir()) {
+                            if (!rodCtrlHere && !isShellBlock(state) && !state.isAir()) {
                                 return fail(FailureCode.INTERIOR_UNKNOWN, p, report.build());
                             }
                         } else if (layout.isCoilZoneWorld(x, y, z)) {
@@ -451,6 +472,22 @@ public final class TurbineValidation {
                 || p.getZ() == minZ || p.getZ() == maxZ;
     }
 
+    private static List<BlockPos> listRodControllers(
+            Level level, int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+        List<BlockPos> list = new ArrayList<>();
+        for (int x = minX; x <= maxX; x++) {
+            for (int y = minY; y <= maxY; y++) {
+                for (int z = minZ; z <= maxZ; z++) {
+                    BlockPos p = new BlockPos(x, y, z);
+                    if (level.getBlockState(p).is(ModBlocks.TURBINE_ROD_CONTROLLER.get())) {
+                        list.add(p.immutable());
+                    }
+                }
+            }
+        }
+        return list;
+    }
+
     private static int countRodControllersExcept(
             Level level, int minX, int minY, int minZ, int maxX, int maxY, int maxZ, BlockPos except) {
         int count = 0;
@@ -560,10 +597,14 @@ public final class TurbineValidation {
                     "message.colossal_reactors.turbine_invalid.no_rod_controller");
             case MULTIPLE_ROD_CONTROLLERS -> net.minecraft.network.chat.Component.translatable(
                     "message.colossal_reactors.turbine_invalid.multiple_rod_controllers", r.rodControllersFound());
+            case ROD_CONTROLLER_NO_COLUMN -> net.minecraft.network.chat.Component.translatable(
+                    "message.colossal_reactors.turbine_invalid.rod_controller_no_column");
             case ROD_CONTROLLER_BORDER -> net.minecraft.network.chat.Component.translatable(
                     "message.colossal_reactors.turbine_invalid.rod_controller_border");
             case ROD_CONTROLLER_FACING -> net.minecraft.network.chat.Component.translatable(
                     "message.colossal_reactors.turbine_invalid.rod_controller_facing");
+            case ROD_CONTROLLER_AXIS_MISMATCH -> net.minecraft.network.chat.Component.translatable(
+                    "message.colossal_reactors.turbine_invalid.rod_controller_axis_mismatch");
             case SHELL_GAP -> net.minecraft.network.chat.Component.translatable(
                     "message.colossal_reactors.turbine_invalid.shell_gap");
             case ROD_IN_COIL_ZONE -> net.minecraft.network.chat.Component.translatable(
