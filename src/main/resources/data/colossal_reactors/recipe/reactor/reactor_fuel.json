@@ -31,6 +31,7 @@
       "inputs": ["%mekanism:fissile_fuel"],
       "consume": 500,
       "output": "%mekanism:nuclear_waste",
+      "color": "#252b27",
       "produce": 500,
       "units_per_fuel": 500,
       "units_per_waste": 500,

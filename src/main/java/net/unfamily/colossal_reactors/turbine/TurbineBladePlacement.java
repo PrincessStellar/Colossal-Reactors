@@ -132,7 +132,7 @@ public final class TurbineBladePlacement {
 
     /**
      * True when {@code state} is a blade that belongs to a rod along {@code outwardFromRod}
-     * (same facing set when placing by clicking the rod: blade points away from the rod).
+     * (same facing as when placing by clicking the rod: blade points away from the rod).
      */
     public static boolean isOwnedBladeAlong(BlockState state, Direction outwardFromRod) {
         return state.is(ModBlocks.TURBINE_BLADE.get())
@@ -140,12 +140,57 @@ public final class TurbineBladePlacement {
                 && state.getValue(TurbineBladeBlock.FACING) == outwardFromRod;
     }
 
+    /**
+     * Ownership along a lateral arm, including blades shared with an aligned neighboring rod:
+     * facing may be opposite when another turbine rod lies further on the same axis.
+     */
+    public static boolean isOwnedBladeAlong(
+            BlockGetter level, BlockPos rodPos, BlockState state, Direction outwardFromRod) {
+        if (!state.is(ModBlocks.TURBINE_BLADE.get()) || !state.hasProperty(TurbineBladeBlock.FACING)) {
+            return false;
+        }
+        Direction facing = state.getValue(TurbineBladeBlock.FACING);
+        if (facing == outwardFromRod) {
+            return true;
+        }
+        if (facing != outwardFromRod.getOpposite()) {
+            return false;
+        }
+        return hasAlignedRodFurtherAlong(level, rodPos, outwardFromRod);
+    }
+
+    /** Another turbine rod further along {@code outward}, same shaft axis — mid blades can be shared. */
+    private static boolean hasAlignedRodFurtherAlong(BlockGetter level, BlockPos rodPos, Direction outward) {
+        BlockState self = safeGetBlockState(level, rodPos);
+        if (!self.is(ModBlocks.TURBINE_ROD.get()) || !self.hasProperty(TurbineRodBlock.FACING)) {
+            return false;
+        }
+        Direction.Axis shaftAxis = self.getValue(TurbineRodBlock.FACING).getAxis();
+        Block rod = ModBlocks.TURBINE_ROD.get();
+        Block blade = ModBlocks.TURBINE_BLADE.get();
+        BlockPos.MutableBlockPos pos = rodPos.mutable().move(outward);
+        int cap = Math.max(maxRing() + 2, 8);
+        for (int step = 0; step < cap; step++) {
+            BlockState at = safeGetBlockState(level, pos);
+            if (at.is(rod)) {
+                return at.hasProperty(TurbineRodBlock.FACING)
+                        && at.getValue(TurbineRodBlock.FACING).getAxis() == shaftAxis;
+            }
+            if (at.is(blade) || at.isAir()) {
+                pos.move(outward);
+                continue;
+            }
+            return false;
+        }
+        return false;
+    }
+
     /** Blade count on one lateral axis from the rod outward (capped by config). */
     public static int depthAlong(BlockGetter level, BlockPos rodPos, Direction lateralDir) {
         int depth = 0;
         BlockPos.MutableBlockPos pos = rodPos.mutable().move(lateralDir);
         int cap = maxRing();
-        while (depth < cap && isOwnedBladeAlong(safeGetBlockState(level, pos), lateralDir)) {
+        while (depth < cap && isOwnedBladeAlong(level, rodPos, safeGetBlockState(level, pos), lateralDir)) {
             depth++;
             pos.move(lateralDir);
         }
@@ -166,7 +211,7 @@ public final class TurbineBladePlacement {
         List<Direction> lateral = lateralDirections(rodAxis);
         for (int ring = 1; ring <= limit; ring++) {
             for (Direction dir : lateral) {
-                if (!isOwnedBladeAlong(safeGetBlockState(level, rodPos.relative(dir, ring)), dir)) {
+                if (!isOwnedBladeAlong(level, rodPos, safeGetBlockState(level, rodPos.relative(dir, ring)), dir)) {
                     return ring;
                 }
             }
@@ -188,7 +233,7 @@ public final class TurbineBladePlacement {
         List<Direction> missing = new ArrayList<>();
         int minDepth = Integer.MAX_VALUE;
         for (Direction dir : lateral) {
-            if (!isOwnedBladeAlong(safeGetBlockState(level, rodPos.relative(dir, ring)), dir)) {
+            if (!isOwnedBladeAlong(level, rodPos, safeGetBlockState(level, rodPos.relative(dir, ring)), dir)) {
                 missing.add(dir);
                 minDepth = Math.min(minDepth, depthAlong(level, rodPos, dir));
             }
@@ -224,8 +269,8 @@ public final class TurbineBladePlacement {
     }
 
     /**
-     * Blade positions owned by this rod: contiguous outward chain on each lateral axis,
-     * only blades whose facing matches the placement direction (away from the rod).
+     * Blade positions owned by this rod: contiguous outward chain on each lateral axis
+     * (same facing as placement, or opposite when shared with an aligned neighboring rod).
      */
     public static List<BlockPos> collectBladePositions(Level level, BlockPos rodPos, Direction rodAxis) {
         List<BlockPos> blades = new ArrayList<>();
@@ -233,7 +278,7 @@ public final class TurbineBladePlacement {
         for (Direction dir : lateralDirections(rodAxis)) {
             BlockPos.MutableBlockPos pos = rodPos.mutable().move(dir);
             int distance = 0;
-            while (distance < scanCap && isOwnedBladeAlong(safeGetBlockState(level, pos), dir)) {
+            while (distance < scanCap && isOwnedBladeAlong(level, rodPos, safeGetBlockState(level, pos), dir)) {
                 blades.add(pos.immutable());
                 pos.move(dir);
                 distance++;
@@ -284,7 +329,7 @@ public final class TurbineBladePlacement {
             if (tryOrder.contains(dir)) {
                 continue;
             }
-            if (isOwnedBladeAlong(safeGetBlockState(level, rodPos.relative(dir, ring)), dir)) {
+            if (isOwnedBladeAlong(level, rodPos, safeGetBlockState(level, rodPos.relative(dir, ring)), dir)) {
                 continue;
             }
             if (ring > 1 && depthAlong(level, rodPos, dir) != ring - 1) {

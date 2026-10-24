@@ -97,6 +97,8 @@ public class ReactorControllerBlockEntity extends BlockEntity implements MenuPro
     private final List<CoolantEntry> coolantEntries = new ArrayList<>();
 
     private int cachedRodFillLevel = 0;
+    /** Dominant-fuel inside tint pushed to rod BEs (controller holds shared fuel). */
+    private int cachedRodInsideTintRgb = ReactorRodBlockEntity.DEFAULT_INSIDE_TINT_RGB;
     private int rodVisualUpdateCursor = 0;
 
     /** Last tick stats for GUI (updated by ReactorSimulation.tick). Fuel is ingots/tick * 100 (e.g. 26 = 0.26). */
@@ -390,16 +392,55 @@ public class ReactorControllerBlockEntity extends BlockEntity implements MenuPro
             if (cur != cachedRodFillLevel) {
                 level.setBlock(pos, state.setValue(ReactorRodBlock.FILL, cachedRodFillLevel), Block.UPDATE_CLIENTS);
             }
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof ReactorRodBlockEntity rod) {
+                rod.applyControllerInsideTint(cachedRodInsideTintRgb);
+            }
         }
     }
 
     private void updateRodVisualFillIfNeeded() {
         int max = getMaxFuelUnitsTotal();
         float pct = max <= 0 ? 0f : Math.max(0f, Math.min(1f, getTotalFuelAndWasteUnits() / (float) max));
-        int level = ReactorRodBlockEntity.fillPercentToLevelForController(pct);
-        if (cachedRodFillLevel != level) {
-            cachedRodFillLevel = level;
+        int fillLevel = ReactorRodBlockEntity.fillPercentToLevelForController(pct);
+        int tint = resolveDominantFuelInsideTint();
+        boolean changed = false;
+        if (cachedRodFillLevel != fillLevel) {
+            cachedRodFillLevel = fillLevel;
+            changed = true;
+        }
+        if (cachedRodInsideTintRgb != tint) {
+            cachedRodInsideTintRgb = tint;
+            changed = true;
+            pushInsideTintToAllRods();
+        }
+        if (changed) {
             rodVisualUpdateCursor = 0;
+        }
+    }
+
+    private int resolveDominantFuelInsideTint() {
+        ResourceLocation best = null;
+        float bestUnits = 0f;
+        for (FuelEntry e : fuelEntries) {
+            if (e.units() > bestUnits) {
+                bestUnits = e.units();
+                best = e.id();
+            }
+        }
+        return ReactorRodBlockEntity.resolveInsideTintRgb(best);
+    }
+
+    private void pushInsideTintToAllRods() {
+        if (!(level instanceof ServerLevel sl) || cachedRodPositions == null || cachedRodPositions.length == 0) {
+            return;
+        }
+        for (long lp : cachedRodPositions) {
+            BlockPos pos = BlockPos.of(lp);
+            BlockEntity be = sl.getBlockEntity(pos);
+            if (be instanceof ReactorRodBlockEntity rod) {
+                rod.applyControllerInsideTint(cachedRodInsideTintRgb);
+            }
         }
     }
 
@@ -487,6 +528,7 @@ public class ReactorControllerBlockEntity extends BlockEntity implements MenuPro
             cachedEffectiveRodCount = 0.0;
             cachedHeatSinkStaticCache = null;
             cachedRodFillLevel = 0;
+            cachedRodInsideTintRgb = ReactorRodBlockEntity.DEFAULT_INSIDE_TINT_RGB;
             rodVisualUpdateCursor = 0;
             return;
         }
@@ -529,6 +571,8 @@ public class ReactorControllerBlockEntity extends BlockEntity implements MenuPro
 
         rebuildSimulationCaches(level, result, cachedRodPositions);
         updateRodVisualFillIfNeeded();
+        // Rods are newly cached: push current tint even if RGB unchanged since last fuel edit.
+        pushInsideTintToAllRods();
         net.unfamily.colossal_reactors.multiblock.MultiblockPortScaling.scaleReactorPorts(level, this);
     }
 
@@ -614,6 +658,7 @@ public class ReactorControllerBlockEntity extends BlockEntity implements MenuPro
         cachedEffectiveRodCount = 0.0;
         cachedHeatSinkStaticCache = null;
         cachedRodFillLevel = 0;
+        cachedRodInsideTintRgb = ReactorRodBlockEntity.DEFAULT_INSIDE_TINT_RGB;
         rodVisualUpdateCursor = 0;
         if (level != null && !level.isClientSide()) {
             setChanged();

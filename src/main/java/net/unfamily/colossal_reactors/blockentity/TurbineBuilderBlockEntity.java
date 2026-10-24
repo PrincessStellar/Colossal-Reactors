@@ -650,8 +650,9 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
     }
 
     /** Left click = open, right click = closed (same as reactor builder). */
+    /** Both LMB and RMB toggle; {@code next} is ignored (only two states). */
     public void cycleOpenTop(boolean next) {
-        openTop = next;
+        openTop = !openTop;
         setChanged();
     }
 

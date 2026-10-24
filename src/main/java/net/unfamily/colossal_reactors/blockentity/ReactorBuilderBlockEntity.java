@@ -602,8 +602,9 @@ public class ReactorBuilderBlockEntity extends BlockEntity implements MenuProvid
     }
 
     /** Cycle open top: next=true -> open, next=false -> closed. Same as heat sink: left=next, right=previous. */
+    /** Both LMB and RMB toggle; {@code next} is ignored (only two states). */
     public void cycleOpenTop(boolean next) {
-        openTop = next;
+        openTop = !openTop;
         setChanged();
     }
 

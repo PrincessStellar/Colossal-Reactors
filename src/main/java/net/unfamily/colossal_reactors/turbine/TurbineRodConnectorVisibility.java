@@ -18,6 +18,7 @@ public final class TurbineRodConnectorVisibility {
         // during client section meshing (RenderChunkRegion has a limited chunk window).
         for (Direction lateral : TurbineBladePlacement.lateralDirections(rodAxis)) {
             if (TurbineBladePlacement.isOwnedBladeAlong(
+                    level, rodPos,
                     TurbineBladePlacement.safeGetBlockState(level, rodPos.relative(lateral)), lateral)) {
                 mask |= 1 << lateral.ordinal();
             }

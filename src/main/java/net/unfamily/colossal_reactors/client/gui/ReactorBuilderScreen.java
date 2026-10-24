@@ -910,7 +910,7 @@ public class ReactorBuilderScreen extends AbstractContainerScreen<ReactorBuilder
             }
             if (isInRightBlockButton(x, y, 3)) {
                 if (menu.getBlockEntity() != null)
-                    PacketDistributor.sendToServer(new ReactorBuilderOptionPayload(menu.getBlockPos(), 0, false));  // OpenTop
+                    PacketDistributor.sendToServer(new ReactorBuilderOptionPayload(menu.getBlockPos(), 0, true));  // OpenTop toggle
                 return true;
             }
         }
