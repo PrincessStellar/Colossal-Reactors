@@ -506,7 +506,7 @@
   "gui.colossal_reactors.builder.website_disclaimer.suffix": " per quel sito o i suoi contenuti.",
   "gui.colossal_reactors.builder.website_alternative.prefix": "In alternativa, clicca il tasto ",
   "gui.colossal_reactors.builder.website_alternative.website": "Website",
-  "gui.colossal_reactors.builder.website_alternative.suffix": " per cambiare il design.",
+  "gui.colossal_reactors.builder.website_alternative.suffix": " per usare i design standard della mod (offline, non dal sito).",
   "gui.colossal_reactors.builder.tooltip.offset_left": "Offset larghezza verso sinistra (larghezza totale invariata)",
   "gui.colossal_reactors.builder.tooltip.offset_right": "Offset larghezza verso destra (larghezza totale invariata)",
   "gui.colossal_reactors.builder.tooltip.center": "Centra sinistra/destra",

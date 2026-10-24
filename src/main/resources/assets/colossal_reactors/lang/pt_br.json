@@ -527,7 +527,7 @@
   "gui.colossal_reactors.builder.website_disclaimer.suffix": " for that site or its content.",
   "gui.colossal_reactors.builder.website_alternative.prefix": "Alternatively, click the ",
   "gui.colossal_reactors.builder.website_alternative.website": "Website",
-  "gui.colossal_reactors.builder.website_alternative.suffix": " button to change the design.",
+  "gui.colossal_reactors.builder.website_alternative.suffix": " button to use the mod's built-in standard designs (offline — not from the website).",
   "message.colossal_reactors.turbine_invalid.rod_controller_no_column": "Invalid: rod controller must sit on the deck above a rod column",
   "message.colossal_reactors.turbine_invalid.rod_controller_axis_mismatch": "Invalid: rod controllers must share the same facing axis"
 }

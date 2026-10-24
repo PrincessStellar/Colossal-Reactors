@@ -527,7 +527,7 @@
   "gui.colossal_reactors.builder.website_disclaimer.suffix": " for that site or its content.",
   "gui.colossal_reactors.builder.website_alternative.prefix": "Alternatively, click the ",
   "gui.colossal_reactors.builder.website_alternative.website": "Website",
-  "gui.colossal_reactors.builder.website_alternative.suffix": " button to change the design.",
+  "gui.colossal_reactors.builder.website_alternative.suffix": " button to use the mod's built-in standard designs (offline — not from the website).",
   "gui.colossal_reactors.builder.tooltip.offset_left": "Offset width toward the left (total width unchanged)",
   "gui.colossal_reactors.builder.tooltip.offset_right": "Offset width toward the right (total width unchanged)",
   "gui.colossal_reactors.builder.tooltip.center": "Center left/right size",

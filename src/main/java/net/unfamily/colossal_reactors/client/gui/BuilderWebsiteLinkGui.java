@@ -17,7 +17,7 @@ public final class BuilderWebsiteLinkGui {
     public static final ResourceLocation BACKGROUND = ResourceLocation.fromNamespaceAndPath(
             ColossalReactors.MODID, "textures/gui/builder_link.png");
     public static final int WIDTH = 230;
-    public static final int HEIGHT = 270;
+    public static final int HEIGHT = 250;
 
     /** Matches other builder / controller text insets. */
     public static final int TEXT_INSET = 12;
@@ -51,7 +51,7 @@ public final class BuilderWebsiteLinkGui {
     }
 
     /**
-     * Alternative line: use the Website pattern button instead of opening the site; "Website" in red.
+     * Alternative line: use the Website pattern button for built-in offline designs; "Website" in red.
      */
     public static MutableComponent alternativeHint() {
         return Component.translatable("gui.colossal_reactors.builder.website_alternative.prefix")

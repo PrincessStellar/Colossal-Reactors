@@ -283,6 +283,11 @@ public class ColossalReactors {
         }
 
         @SubscribeEvent
+        static void registerItemColors(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Item event) {
+            net.unfamily.colossal_reactors.client.ReactorRodColors.registerItem(event);
+        }
+
+        @SubscribeEvent
         static void registerMenuScreens(RegisterMenuScreensEvent event) {
             event.register(ModMenuTypes.RESOURCE_PORT_MENU.get(), ResourcePortScreen::new);
             event.register(ModMenuTypes.REDSTONE_PORT_MENU.get(), RedstonePortScreen::new);
