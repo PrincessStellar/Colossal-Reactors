@@ -13,9 +13,10 @@ import net.unfamily.colossal_reactors.ColossalReactors;
 import net.unfamily.colossal_reactors.blockentity.TurbineBuilderBlockEntity;
 
 /**
- * C2S: cycle heat sink option in Reactor Builder. next=true = next, next=false = previous (left=next, right=previous).
+ * C2S: cycle turbine builder coil material. {@code next}=true advances, false goes back.
+ * {@code rodColumnCoil}=false cycles zone coil; true cycles rod-column coil above rods.
  */
-public record TurbineBuilderCoilPayload(BlockPos pos, boolean next) implements CustomPacketPayload {
+public record TurbineBuilderCoilPayload(BlockPos pos, boolean next, boolean rodColumnCoil) implements CustomPacketPayload {
 
     public static final Type<TurbineBuilderCoilPayload> TYPE = new Type<>(
             Identifier.fromNamespaceAndPath(ColossalReactors.MODID, "turbine_builder_coil"));
@@ -25,6 +26,8 @@ public record TurbineBuilderCoilPayload(BlockPos pos, boolean next) implements C
             TurbineBuilderCoilPayload::pos,
             net.minecraft.network.codec.ByteBufCodecs.BOOL,
             TurbineBuilderCoilPayload::next,
+            net.minecraft.network.codec.ByteBufCodecs.BOOL,
+            TurbineBuilderCoilPayload::rodColumnCoil,
             TurbineBuilderCoilPayload::new
     );
 
@@ -39,7 +42,11 @@ public record TurbineBuilderCoilPayload(BlockPos pos, boolean next) implements C
             ServerLevel level = player.level();
             BlockEntity be = level.getBlockEntity(packet.pos());
             if (be instanceof TurbineBuilderBlockEntity builder) {
-                builder.cycleCoil(packet.next());
+                if (packet.rodColumnCoil()) {
+                    builder.cycleRodCoil(packet.next());
+                } else {
+                    builder.cycleCoil(packet.next());
+                }
             }
         });
     }

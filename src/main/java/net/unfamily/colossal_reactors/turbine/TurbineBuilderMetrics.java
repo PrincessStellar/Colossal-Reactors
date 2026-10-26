@@ -30,7 +30,69 @@ public final class TurbineBuilderMetrics {
             List<Integer> layerMaxBladesPerRod
     ) {}
 
+    /** Per-cell coil zone counts and efficiencies (zone vs rod-column materials). */
+    public record CoilZoneFillMetrics(int solidCellCount, double averageCoilEfficiency, double rodColumnFlowEfficiency) {}
+
     private TurbineBuilderMetrics() {}
+
+    public static int coilOptionForCrossCell(
+            int crossA, int crossB, int crossSizeA, int crossSizeB,
+            int rodPattern,
+            @Nullable BiPredicate<Integer, Integer> websiteRodOverride,
+            int zoneCoilIndex,
+            int rodCoilIndex) {
+        if (TurbineRodPatternLogic.isRodColumn(crossA, crossB, crossSizeA, crossSizeB, rodPattern, websiteRodOverride)) {
+            return rodCoilIndex;
+        }
+        return zoneCoilIndex;
+    }
+
+    public static CoilZoneFillMetrics coilZoneFillMetrics(
+            TurbineRotorLayout layout,
+            int minX, int minY, int minZ, int maxX, int maxY, int maxZ,
+            int rodPattern,
+            int zoneCoilIndex,
+            int rodCoilIndex,
+            @Nullable BiPredicate<Integer, Integer> websiteRodOverride) {
+        if (TurbineRodPatternLogic.skipsCoils(rodPattern)) {
+            return new CoilZoneFillMetrics(0, Config.TURBINE_EMPTY_COIL_EFFICIENCY.get(), 1.0);
+        }
+        int solidCount = 0;
+        double effSum = 0;
+        double flowSum = 0;
+        int rodFlowCells = 0;
+        int rw = layout.crossSizeA();
+        int rd = layout.crossSizeB();
+        List<ElecCoilDefinition> defs = ElecCoilLoader.getAllDefinitions();
+        for (int xx = minX + 1; xx < maxX; xx++) {
+            for (int yy = minY + 1; yy < maxY; yy++) {
+                for (int zz = minZ + 1; zz < maxZ; zz++) {
+                    if (!layout.isCoilZoneWorld(xx, yy, zz)) {
+                        continue;
+                    }
+                    int ca = layout.crossAFromWorld(xx, yy, zz);
+                    int cb = layout.crossBFromWorld(xx, yy, zz);
+                    int idx = coilOptionForCrossCell(
+                            ca, cb, rw, rd, rodPattern, websiteRodOverride, zoneCoilIndex, rodCoilIndex);
+                    if (ElecCoilLoader.shouldSkipSolidCoilAutoPlacement(idx)) {
+                        continue;
+                    }
+                    solidCount++;
+                    if (idx >= 0 && idx < defs.size()) {
+                        ElecCoilDefinition def = defs.get(idx);
+                        effSum += Math.min(def.effCoe(), def.effMax());
+                        if (TurbineRodPatternLogic.isRodColumn(ca, cb, rw, rd, rodPattern, websiteRodOverride)) {
+                            flowSum += Math.min(def.flowCoe(), def.flowMax());
+                            rodFlowCells++;
+                        }
+                    }
+                }
+            }
+        }
+        double coilEff = solidCount > 0 ? effSum / solidCount : Config.TURBINE_EMPTY_COIL_EFFICIENCY.get();
+        double flowEff = rodFlowCells > 0 ? flowSum / rodFlowCells : 1.0;
+        return new CoilZoneFillMetrics(solidCount, coilEff, flowEff);
+    }
 
     public static Estimate fromShellSizes(
             int sizeLeft, int sizeRight, int sizeHeight, int sizeDepth,
@@ -82,6 +144,22 @@ public final class TurbineBuilderMetrics {
             boolean websiteClimbProfile,
             int websiteBladeRingCap,
             int bladeVariant) {
+        return fromShellSizes(sizeLeft, sizeRight, sizeHeight, sizeDepth,
+                placementAxisIndex, storedCoilSetting, rodPattern, coilIndex, coilIndex,
+                websiteRodOverride, websiteClimbProfile, websiteBladeRingCap, bladeVariant);
+    }
+
+    public static Estimate fromShellSizes(
+            int sizeLeft, int sizeRight, int sizeHeight, int sizeDepth,
+            int placementAxisIndex,
+            int storedCoilSetting,
+            int rodPattern,
+            int coilIndex,
+            int rodCoilIndex,
+            @Nullable BiPredicate<Integer, Integer> websiteRodOverride,
+            boolean websiteClimbProfile,
+            int websiteBladeRingCap,
+            int bladeVariant) {
 
         int w = sizeLeft + sizeRight + 1;
         int h = sizeHeight + 1;
@@ -94,16 +172,14 @@ public final class TurbineBuilderMetrics {
         RodBladeCounts blades = countRodsAndBlades(
                 layout, rodPattern, websiteRodOverride, websiteClimbProfile, websiteBladeRingCap, bladeVariant);
 
-        int coilBlocks = 0;
-        if (!TurbineRodPatternLogic.skipsCoils(rodPattern)
-                && !ElecCoilLoader.shouldSkipSolidCoilAutoPlacement(coilIndex)) {
-            coilBlocks = layout.crossSizeA() * layout.crossSizeB() * appliedCoils;
-        }
+        CoilZoneFillMetrics coils = coilZoneFillMetrics(
+                layout, 0, 0, 0, w - 1, h - 1, d - 1,
+                rodPattern, coilIndex, rodCoilIndex, websiteRodOverride);
 
         return new Estimate(
                 blades.rodBlocks(),
                 blades.bladeItems(),
-                coilBlocks,
+                coils.solidCellCount(),
                 layout.rodExtent(),
                 blades.layerMaxBladesPerRod());
     }
@@ -178,6 +254,22 @@ public final class TurbineBuilderMetrics {
             boolean websiteClimbProfile,
             int websiteBladeRingCap,
             int bladeVariant) {
+        return idealBuildMetrics(sizeLeft, sizeRight, sizeHeight, sizeDepth,
+                placementAxisIndex, storedCoilSetting, rodPattern, coilIndex, coilIndex,
+                websiteRodOverride, websiteClimbProfile, websiteBladeRingCap, bladeVariant);
+    }
+
+    public static IdealBuildMetrics idealBuildMetrics(
+            int sizeLeft, int sizeRight, int sizeHeight, int sizeDepth,
+            int placementAxisIndex,
+            int storedCoilSetting,
+            int rodPattern,
+            int coilIndex,
+            int rodCoilIndex,
+            @Nullable BiPredicate<Integer, Integer> websiteRodOverride,
+            boolean websiteClimbProfile,
+            int websiteBladeRingCap,
+            int bladeVariant) {
 
         int w = sizeLeft + sizeRight + 1;
         int h = sizeHeight + 1;
@@ -190,36 +282,19 @@ public final class TurbineBuilderMetrics {
         RodBladeCounts blades = countRodsAndBlades(
                 layout, rodPattern, websiteRodOverride, websiteClimbProfile, websiteBladeRingCap, bladeVariant);
 
-        int coilBlocks = 0;
-        if (!TurbineRodPatternLogic.skipsCoils(rodPattern)
-                && !ElecCoilLoader.shouldSkipSolidCoilAutoPlacement(coilIndex)) {
-            coilBlocks = layout.crossSizeA() * layout.crossSizeB() * appliedCoils;
-        }
-
-        double coilEff;
-        double flowEff = 1.0;
-        if (coilBlocks > 0 && coilIndex >= 0 && coilIndex < ElecCoilLoader.getAllDefinitions().size()) {
-            ElecCoilDefinition coilDef = ElecCoilLoader.getAllDefinitions().get(coilIndex);
-            coilEff = Math.min(coilDef.effCoe(), coilDef.effMax());
-            // Homogeneous fill: flow only from columns that have rods (same as runtime RC columns).
-            int rodCols = TurbineRodPatternLogic.rodColumns(
-                    layout.crossSizeA(), layout.crossSizeB(), rodPattern, websiteRodOverride).size();
-            if (rodCols > 0) {
-                flowEff = Math.min(coilDef.flowCoe(), coilDef.flowMax());
-            }
-        } else {
-            coilEff = Config.TURBINE_EMPTY_COIL_EFFICIENCY.get();
-        }
+        CoilZoneFillMetrics coils = coilZoneFillMetrics(
+                layout, 0, 0, 0, w - 1, h - 1, d - 1,
+                rodPattern, coilIndex, rodCoilIndex, websiteRodOverride);
 
         double bladeEff = TurbineBladeEfficiency.computeMultiplier(blades.layerMaxBladesPerRod());
 
         return new IdealBuildMetrics(
                 blades.bladeItems(),
                 blades.validBladeItems(),
-                coilBlocks,
-                coilEff,
+                coils.solidCellCount(),
+                coils.averageCoilEfficiency(),
                 bladeEff,
-                flowEff,
+                coils.rodColumnFlowEfficiency(),
                 layout);
     }
 

@@ -92,7 +92,7 @@ public class ReactorBuilderScreen extends AbstractContainerScreen<ReactorBuilder
      * Tank at (12, 26), same dimensions as Resource Port: 12x54 fill with 1px inset
      */
     private static final int FLUID_BAR_X = 12;
-    private static final int FLUID_BAR_Y = 26;
+    private static final int FLUID_BAR_Y = 28;
     private static final int FLUID_FILL_WIDTH = 12;
     private static final int FLUID_FILL_HEIGHT = 54;
     private static final int FLUID_FILL_INSET = 1;

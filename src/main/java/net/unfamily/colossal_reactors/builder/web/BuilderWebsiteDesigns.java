@@ -93,6 +93,7 @@ public final class BuilderWebsiteDesigns {
         int coilIdx = findCoilOptionIndex(design.coilId());
         if (coilIdx >= 0) {
             builder.setSelectedCoilIndex(coilIdx);
+            builder.setSelectedRodCoilIndex(coilIdx);
         }
         builder.setWebsiteDesign(design.code());
         return builder.hasValidWebsiteDesign();

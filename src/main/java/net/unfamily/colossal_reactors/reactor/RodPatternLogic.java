@@ -148,14 +148,17 @@ public final class RodPatternLogic {
         return inCenterX && inCenterZ;
     }
 
-    /** Layer count for Frame (2D: uses only rw, rd). */
+    /**
+     * Even Chebyshev rings that fit in the rod space (dist 0, 2, 4, …), each 1 cell wide
+     * with a 1-cell gap between them. Not capped — large reactors keep intermediate rings.
+     */
     public static int expansionLayerCount(int rw, int rd) {
         int minDim = Math.min(rw, rd);
-        if (minDim < 5) return 1;
-        if (minDim < 7) return 2;
-        int count2 = countExpansionColumns(rw, rd, 2, true);
-        int count3 = countExpansionColumns(rw, rd, 3, true);
-        return count3 >= count2 ? 3 : 2;
+        if (minDim < 3) {
+            return 0;
+        }
+        int maxDist = (minDim - 1) / 2;
+        return maxDist / 2 + 1;
     }
 
     /** Backward compatibility: 3D signature delegates to 2D. */

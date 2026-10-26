@@ -554,19 +554,9 @@ public final class TurbineBuildLogic {
 
     /** Coils: last build stage — fill entire coil zone from buffer (supports tag selectors). */
     private static boolean tickCoils(ServerLevel level, TurbineBuilderBlockEntity builder, BuildBounds b) {
-        TurbineRotorLayout layout = b.layout;
-        int idx = builder.getSelectedCoilIndex();
-        if (ElecCoilLoader.shouldSkipSolidCoilAutoPlacement(idx)) {
+        if (!hasUnfilledCoilCells(level, builder, b)) {
             builder.setBuildStage(STAGE_DONE);
             return false;
-        }
-        if (!hasUnfilledCoilCells(level, b, idx)) {
-            builder.setBuildStage(STAGE_DONE);
-            return false;
-        }
-        BlockState coilState = ElecCoilLoader.placementStateForOption(idx, level.registryAccess());
-        if (coilState == null) {
-            return true;
         }
 
         int totalCells = countCoilZoneCells(b);
@@ -580,11 +570,19 @@ public final class TurbineBuildLogic {
             if (pos == null) {
                 break;
             }
+            int idx = selectedCoilIndexForWorldCell(builder, b, pos.getX(), pos.getY(), pos.getZ());
+            if (ElecCoilLoader.shouldSkipSolidCoilAutoPlacement(idx)) {
+                continue;
+            }
             BlockState existing = level.getBlockState(pos);
             if (ElecCoilLoader.isBlockMatchingSelectedCoil(existing, idx, level.registryAccess())) {
                 continue;
             }
             if (!canReplaceForSolidBlock(level, pos)) {
+                continue;
+            }
+            BlockState coilState = ElecCoilLoader.placementStateForOption(idx, level.registryAccess());
+            if (coilState == null) {
                 continue;
             }
             if (!consumeCoilFromBuffer(builder, idx, level)) {
@@ -596,7 +594,7 @@ public final class TurbineBuildLogic {
             return true;
         }
 
-        if (hasUnfilledCoilCells(level, b, idx)) {
+        if (hasUnfilledCoilCells(level, builder, b)) {
             builder.setBuildRodCursor(0, 0, 0);
             return true;
         }
@@ -604,19 +602,31 @@ public final class TurbineBuildLogic {
         return false;
     }
 
+    private static int selectedCoilIndexForWorldCell(
+            TurbineBuilderBlockEntity builder, BuildBounds b, int wx, int wy, int wz) {
+        TurbineRotorLayout layout = b.layout;
+        int ca = layout.crossAFromWorld(wx, wy, wz);
+        int cb = layout.crossBFromWorld(wx, wy, wz);
+        return TurbineBuilderMetrics.coilOptionForCrossCell(
+                ca, cb, layout.crossSizeA(), layout.crossSizeB(),
+                builder.getRodPattern(), websiteRodOverride(builder),
+                builder.getSelectedCoilIndex(), builder.getSelectedRodCoilIndex());
+    }
+
     /**
      * Coil zone cells that still need the selected coil (empty or replaceable non-match).
      * Used so the builder waits for buffer items instead of marking 100% after a partial scan.
      */
-    public static boolean hasUnfilledCoilCells(ServerLevel level, BuildBounds b, int coilIndex) {
-        if (ElecCoilLoader.shouldSkipSolidCoilAutoPlacement(coilIndex)) {
-            return false;
-        }
+    public static boolean hasUnfilledCoilCells(ServerLevel level, TurbineBuilderBlockEntity builder, BuildBounds b) {
         TurbineRotorLayout layout = b.layout;
         for (int xx = b.minX + 1; xx < b.maxX; xx++) {
             for (int yy = b.minY + 1; yy < b.maxY; yy++) {
                 for (int zz = b.minZ + 1; zz < b.maxZ; zz++) {
                     if (!layout.isCoilZoneWorld(xx, yy, zz)) {
+                        continue;
+                    }
+                    int coilIndex = selectedCoilIndexForWorldCell(builder, b, xx, yy, zz);
+                    if (ElecCoilLoader.shouldSkipSolidCoilAutoPlacement(coilIndex)) {
                         continue;
                     }
                     BlockPos pos = new BlockPos(xx, yy, zz);
@@ -634,17 +644,19 @@ public final class TurbineBuildLogic {
         return false;
     }
 
-    /** Coil zone cells already matching the selected coil type. */
-    public static int countMatchingCoilCells(ServerLevel level, BuildBounds b, int coilIndex) {
-        if (ElecCoilLoader.shouldSkipSolidCoilAutoPlacement(coilIndex)) {
-            return 0;
-        }
+    /** Coil zone cells already matching the per-cell selected coil type. */
+    public static int countMatchingCoilCells(ServerLevel level, TurbineBuilderBlockEntity builder, BuildBounds b) {
         int count = 0;
         TurbineRotorLayout layout = b.layout;
         for (int xx = b.minX + 1; xx < b.maxX; xx++) {
             for (int yy = b.minY + 1; yy < b.maxY; yy++) {
                 for (int zz = b.minZ + 1; zz < b.maxZ; zz++) {
                     if (!layout.isCoilZoneWorld(xx, yy, zz)) {
+                        continue;
+                    }
+                    int coilIndex = selectedCoilIndexForWorldCell(builder, b, xx, yy, zz);
+                    if (ElecCoilLoader.shouldSkipSolidCoilAutoPlacement(coilIndex)) {
+                        count++;
                         continue;
                     }
                     if (ElecCoilLoader.isBlockMatchingSelectedCoil(
@@ -885,8 +897,9 @@ public final class TurbineBuildLogic {
                 level.registryAccess(),
                 builder.getSizeLeft(), builder.getSizeRight(), builder.getSizeHeight(), builder.getSizeDepth(),
                 builder.getPlacementAxisIndex(),
-                builder.getRodPattern(), builder.getSelectedCoilIndex(), builder.getAppliedCoilLayerCount(),
-                builder.isOpenTop(), rodOverride, climb, ringCap);
+                builder.getRodPattern(), builder.getSelectedCoilIndex(), builder.getSelectedRodCoilIndex(),
+                builder.getAppliedCoilLayerCount(),
+                builder.isOpenTop(), rodOverride, climb, ringCap, builder.getBladeVariant());
         return counts.frameShellTotal()
                 + counts.closureDeckCasings()
                 + counts.rodControllers()
@@ -902,7 +915,7 @@ public final class TurbineBuildLogic {
                 + countPlacedRodController(level, builder, b, b.layout, pattern)
                 + countPlacedRods(level, builder, b)
                 + countPlacedBlades(level, builder, b)
-                + countMatchingCoilCells(level, b, builder.getSelectedCoilIndex());
+                + countMatchingCoilCells(level, builder, b);
     }
 
     private static int countPlacedFrameShell(ServerLevel level, TurbineBuilderBlockEntity builder, BuildBounds b) {

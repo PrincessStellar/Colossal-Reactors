@@ -103,11 +103,26 @@ public final class TurbineSimulation {
             boolean websiteClimbProfile,
             int websiteBladeRingCap,
             int bladeVariant) {
+        return simulateFromBuilderParams(registryAccess, sizeLeft, sizeRight, sizeHeight, sizeDepth,
+                placementAxisIndex, rodPattern, coilIndex, coilIndex, storedCoilSetting, generationId,
+                websiteRodOverride, websiteClimbProfile, websiteBladeRingCap, bladeVariant);
+    }
+
+    public static SimulationResult simulateFromBuilderParams(
+            RegistryAccess registryAccess,
+            int sizeLeft, int sizeRight, int sizeHeight, int sizeDepth,
+            int placementAxisIndex,
+            int rodPattern, int coilIndex, int rodCoilIndex, int storedCoilSetting,
+            @Nullable Identifier generationId,
+            @Nullable java.util.function.BiPredicate<Integer, Integer> websiteRodOverride,
+            boolean websiteClimbProfile,
+            int websiteBladeRingCap,
+            int bladeVariant) {
 
         TurbineGenerationDefinition gen = generationForSimulation(registryAccess, generationId);
         TurbineProductionMath.ProductionEstimate production = TurbineProductionMath.fromBuilderParams(
                 sizeLeft, sizeRight, sizeHeight, sizeDepth,
-                placementAxisIndex, rodPattern, coilIndex, storedCoilSetting, gen,
+                placementAxisIndex, rodPattern, coilIndex, rodCoilIndex, storedCoilSetting, gen,
                 websiteRodOverride, websiteClimbProfile, websiteBladeRingCap, bladeVariant);
 
         if (Boolean.TRUE.equals(Config.TURBINE_SIMULATION_DEBUG.get())) {

@@ -62,7 +62,7 @@ public class TurbineBuilderMenu extends AbstractContainerMenu {
             this.blockEntity = null;
             this.levelAccess = ContainerLevelAccess.NULL;
             this.fluidData = new SimpleContainerData(3);
-            this.sizeData = new SimpleContainerData(17);
+            this.sizeData = new SimpleContainerData(19);
         }
         addDataSlots(fluidData);
         addDataSlots(sizeData);
@@ -114,10 +114,6 @@ public class TurbineBuilderMenu extends AbstractContainerMenu {
         this.hideAllSlotsForSimulationView = hide;
     }
 
-    public boolean isHideAllSlotsForSimulationView() {
-        return hideAllSlotsForSimulationView;
-    }
-
     public ItemStack getMarkInputFilter(int slot) {
         return blockEntity != null ? blockEntity.getMarkInputFilter(slot) : ItemStack.EMPTY;
     }
@@ -148,6 +144,7 @@ public class TurbineBuilderMenu extends AbstractContainerMenu {
     }
 
     public int getSelectedCoilIndex() { return sizeData.get(7); }
+    public int getSelectedRodCoilIndex() { return sizeData.get(18); }
     public int getHeatSinkIndex() { return getSelectedCoilIndex(); }
     public int getCoilLayerCount() { return sizeData.get(8); }
     public int getRodPattern() { return sizeData.get(9); }
@@ -160,7 +157,6 @@ public class TurbineBuilderMenu extends AbstractContainerMenu {
     public int getBuildProgressPercent() { return sizeData.get(13); }
     public boolean isBuildProgressVisible() { return sizeData.get(14) != 0; }
     public int getPlacementAxisOrdinal() { return sizeData.get(15); }
-    /** Simulation steam-generation recipe index (index 16). */
     public int getSimGenerationIndex() { return sizeData.get(16); }
 
     @Override
