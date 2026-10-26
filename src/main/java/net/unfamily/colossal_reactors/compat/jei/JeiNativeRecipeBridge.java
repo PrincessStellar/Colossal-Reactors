@@ -3,7 +3,9 @@ package net.unfamily.colossal_reactors.compat.jei;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
@@ -18,6 +20,7 @@ import net.unfamily.colossal_reactors.crafting.ModColossalRecipes;
 import net.unfamily.colossal_reactors.datapack.DatapackSelectorValidator;
 import net.unfamily.colossal_reactors.fuel.FuelDefinition;
 import net.unfamily.colossal_reactors.fuel.FuelLoader;
+import net.unfamily.colossal_reactors.heatingcoil.ConsumeOption;
 import net.unfamily.colossal_reactors.heatingcoil.HeatingCoilDefinition;
 import net.unfamily.colossal_reactors.heatingcoil.HeatingCoilLoader;
 import net.unfamily.colossal_reactors.heatsink.HeatSinkDefinition;
@@ -38,6 +41,7 @@ import org.jetbrains.annotations.Nullable;
  * missed a bundle (e.g. Gradle classes-only mod path).
  * Applies the same {@link DatapackSelectorValidator} sanitize as machine loaders so invalid
  * (unresolved) recipes are never shown in recipe viewers.
+ * Semantic last-wins (same keys as loaders) so addon packs replace base cards instead of mixing.
  */
 public final class JeiNativeRecipeBridge {
     private JeiNativeRecipeBridge() {}
@@ -91,7 +95,7 @@ public final class JeiNativeRecipeBridge {
     }
 
     public static List<FuelJeiRecipe> fuels(@Nullable RecipeManager manager) {
-        List<FuelJeiRecipe> out = new ArrayList<>();
+        Map<String, FuelJeiRecipe> byKey = new LinkedHashMap<>();
         for (RecipeHolder<ColossalJsonRecipe> holder : holders(ModColossalRecipes.FUEL.get(), manager)) {
             int i = 0;
             List<JsonObject> entries = expandEntries(holder.value().json());
@@ -99,12 +103,14 @@ public final class JeiNativeRecipeBridge {
                 FuelDefinition def = FuelLoader.parseEntry(entry, holder.id().toString(), true);
                 FuelDefinition sanitized = def != null ? DatapackSelectorValidator.sanitizeFuel(def) : null;
                 if (sanitized != null) {
-                    out.add(FuelJeiRecipe.of(sanitized, childId(holder.id(), i, entries.size())));
+                    byKey.put(
+                            sanitized.fuelId().toString(),
+                            FuelJeiRecipe.of(sanitized, childId(holder.id(), i, entries.size())));
                 }
                 i++;
             }
         }
-        return out;
+        return new ArrayList<>(byKey.values());
     }
 
     public static List<CoolantJeiRecipe> coolants() {
@@ -112,7 +118,7 @@ public final class JeiNativeRecipeBridge {
     }
 
     public static List<CoolantJeiRecipe> coolants(@Nullable RecipeManager manager) {
-        List<CoolantJeiRecipe> out = new ArrayList<>();
+        Map<String, CoolantJeiRecipe> byKey = new LinkedHashMap<>();
         for (RecipeHolder<ColossalJsonRecipe> holder : holders(ModColossalRecipes.COOLANT.get(), manager)) {
             int i = 0;
             List<JsonObject> entries = expandEntries(holder.value().json());
@@ -120,12 +126,15 @@ public final class JeiNativeRecipeBridge {
                 CoolantDefinition def = CoolantLoader.parseEntry(entry, holder.id().toString(), true);
                 CoolantDefinition sanitized = def != null ? DatapackSelectorValidator.sanitizeCoolant(def) : null;
                 if (sanitized != null) {
-                    out.addAll(CoolantJeiRecipe.expand(sanitized, childId(holder.id(), i, entries.size())));
+                    ResourceLocation id = childId(holder.id(), i, entries.size());
+                    for (CoolantJeiRecipe card : CoolantJeiRecipe.expand(sanitized, id)) {
+                        byKey.put(sanitized.coolantId().toString(), card);
+                    }
                 }
                 i++;
             }
         }
-        return out;
+        return new ArrayList<>(byKey.values());
     }
 
     public static List<HeatSinkJeiRecipe> heatSinks() {
@@ -133,7 +142,7 @@ public final class JeiNativeRecipeBridge {
     }
 
     public static List<HeatSinkJeiRecipe> heatSinks(@Nullable RecipeManager manager) {
-        List<HeatSinkJeiRecipe> out = new ArrayList<>();
+        Map<String, HeatSinkJeiRecipe> byKey = new LinkedHashMap<>();
         for (RecipeHolder<ColossalJsonRecipe> holder : holders(ModColossalRecipes.HEAT_SINKS.get(), manager)) {
             int i = 0;
             List<JsonObject> entries = expandEntries(holder.value().json());
@@ -141,12 +150,15 @@ public final class JeiNativeRecipeBridge {
                 HeatSinkDefinition def = HeatSinkLoader.parseEntry(entry, holder.id().toString());
                 HeatSinkDefinition sanitized = def != null ? DatapackSelectorValidator.sanitizeHeatSink(def) : null;
                 if (sanitized != null) {
-                    out.add(HeatSinkJeiRecipe.of(sanitized, childId(holder.id(), i, entries.size())));
+                    String key = HeatSinkLoader.mergeKey(sanitized);
+                    if (!key.isEmpty() && !"\u0002".equals(key)) {
+                        byKey.put(key, HeatSinkJeiRecipe.of(sanitized, childId(holder.id(), i, entries.size())));
+                    }
                 }
                 i++;
             }
         }
-        return out;
+        return new ArrayList<>(byKey.values());
     }
 
     public static List<MelterJeiRecipe> melterRecipes() {
@@ -154,19 +166,22 @@ public final class JeiNativeRecipeBridge {
     }
 
     public static List<MelterJeiRecipe> melterRecipes(@Nullable RecipeManager manager) {
-        List<MelterJeiRecipe> out = new ArrayList<>();
+        Map<String, MelterJeiRecipe> byKey = new LinkedHashMap<>();
         for (RecipeHolder<ColossalJsonRecipe> holder : holders(ModColossalRecipes.MELTER_RECIPES.get(), manager)) {
             int i = 0;
             List<JsonObject> entries = expandEntries(holder.value().json());
             for (JsonObject entry : entries) {
                 MelterRecipe r = MelterRecipesLoader.parseEntry(entry, holder.id().toString());
                 if (r != null && DatapackSelectorValidator.isMelterRecipeResolvable(r)) {
-                    out.add(MelterJeiRecipe.of(r, childId(holder.id(), i, entries.size())));
+                    String key = MelterRecipesLoader.mergeKey(r);
+                    if (!key.isEmpty()) {
+                        byKey.put(key, MelterJeiRecipe.of(r, childId(holder.id(), i, entries.size())));
+                    }
                 }
                 i++;
             }
         }
-        return out;
+        return new ArrayList<>(byKey.values());
     }
 
     public static List<MelterHeatJeiRecipe> melterHeats() {
@@ -174,7 +189,7 @@ public final class JeiNativeRecipeBridge {
     }
 
     public static List<MelterHeatJeiRecipe> melterHeats(@Nullable RecipeManager manager) {
-        List<MelterHeatJeiRecipe> out = new ArrayList<>();
+        Map<String, MelterHeatJeiRecipe> byKey = new LinkedHashMap<>();
         for (RecipeHolder<ColossalJsonRecipe> holder : holders(ModColossalRecipes.MELTER_HEATS.get(), manager)) {
             ResourceLocation holderId = holder.id();
             List<MelterHeatEntry> list = MelterHeatsLoader.parseFromRoot(holder.value().json(), holderId.toString());
@@ -184,11 +199,14 @@ public final class JeiNativeRecipeBridge {
             for (int i = 0; i < list.size(); i++) {
                 MelterHeatEntry sanitized = DatapackSelectorValidator.sanitizeMelterHeat(list.get(i));
                 if (sanitized != null) {
-                    out.add(MelterHeatJeiRecipe.of(sanitized, holderId, i));
+                    String key = MelterHeatsLoader.mergeKey(sanitized);
+                    if (!key.isEmpty() && !"\u0002".equals(key)) {
+                        byKey.put(key, MelterHeatJeiRecipe.of(sanitized, holderId, i));
+                    }
                 }
             }
         }
-        return out;
+        return new ArrayList<>(byKey.values());
     }
 
     public static List<ElecCoilJeiRecipe> elecCoils() {
@@ -196,7 +214,7 @@ public final class JeiNativeRecipeBridge {
     }
 
     public static List<ElecCoilJeiRecipe> elecCoils(@Nullable RecipeManager manager) {
-        List<ElecCoilJeiRecipe> out = new ArrayList<>();
+        Map<String, ElecCoilJeiRecipe> byKey = new LinkedHashMap<>();
         for (RecipeHolder<ColossalJsonRecipe> holder : holders(ModColossalRecipes.ELEC_COILS.get(), manager)) {
             int i = 0;
             List<JsonObject> entries = expandEntries(holder.value().json());
@@ -208,12 +226,15 @@ public final class JeiNativeRecipeBridge {
                         double empty = Config.TURBINE_EMPTY_COIL_EFFICIENCY.get();
                         sanitized = new ElecCoilDefinition(sanitized.validBlocks(), empty, empty, 1.0, 1.0);
                     }
-                    out.add(ElecCoilJeiRecipe.of(sanitized, childId(holder.id(), i, entries.size())));
+                    String key = ElecCoilLoader.mergeKey(sanitized);
+                    if (!key.isEmpty()) {
+                        byKey.put(key, ElecCoilJeiRecipe.of(sanitized, childId(holder.id(), i, entries.size())));
+                    }
                 }
                 i++;
             }
         }
-        return out;
+        return new ArrayList<>(byKey.values());
     }
 
     public static List<TurbineJeiRecipe> turbineGeneration() {
@@ -221,7 +242,7 @@ public final class JeiNativeRecipeBridge {
     }
 
     public static List<TurbineJeiRecipe> turbineGeneration(@Nullable RecipeManager manager) {
-        List<TurbineJeiRecipe> out = new ArrayList<>();
+        Map<String, TurbineJeiRecipe> byKey = new LinkedHashMap<>();
         for (RecipeHolder<ColossalJsonRecipe> holder : holders(ModColossalRecipes.TURBINE_GENERATION.get(), manager)) {
             int i = 0;
             List<JsonObject> entries = expandEntries(holder.value().json());
@@ -231,12 +252,15 @@ public final class JeiNativeRecipeBridge {
                 TurbineGenerationDefinition sanitized =
                         def != null ? DatapackSelectorValidator.sanitizeTurbineGeneration(def) : null;
                 if (sanitized != null) {
-                    out.addAll(TurbineJeiRecipe.expand(sanitized, childId(holder.id(), i, entries.size())));
+                    ResourceLocation id = childId(holder.id(), i, entries.size());
+                    for (TurbineJeiRecipe card : TurbineJeiRecipe.expand(sanitized, id)) {
+                        byKey.put(sanitized.generationId().toString(), card);
+                    }
                 }
                 i++;
             }
         }
-        return out;
+        return new ArrayList<>(byKey.values());
     }
 
     public static List<HeatingCoilJeiRecipe> heatingCoils() {
@@ -244,16 +268,34 @@ public final class JeiNativeRecipeBridge {
     }
 
     public static List<HeatingCoilJeiRecipe> heatingCoils(@Nullable RecipeManager manager) {
-        List<HeatingCoilJeiRecipe> out = new ArrayList<>();
+        Map<ResourceLocation, HeatingCoilDefinition> coils = new LinkedHashMap<>();
+        Map<ResourceLocation, ResourceLocation> lastHolderId = new LinkedHashMap<>();
         for (RecipeHolder<ColossalJsonRecipe> holder : holders(ModColossalRecipes.HEATING_COILS.get(), manager)) {
             ResourceLocation id = holder.id();
             for (HeatingCoilDefinition def :
                     HeatingCoilLoader.parseFromRoot(holder.value().json(), id.toString())) {
                 HeatingCoilDefinition sanitized = DatapackSelectorValidator.sanitizeHeatingCoil(def);
-                out.addAll(HeatingCoilJeiRecipe.expand(sanitized, id));
+                if (sanitized == null) {
+                    continue;
+                }
+                coils.merge(sanitized.id(), sanitized, JeiNativeRecipeBridge::mergeHeatingCoil);
+                lastHolderId.put(sanitized.id(), id);
             }
         }
+        List<HeatingCoilJeiRecipe> out = new ArrayList<>();
+        for (Map.Entry<ResourceLocation, HeatingCoilDefinition> e : coils.entrySet()) {
+            out.addAll(HeatingCoilJeiRecipe.expand(e.getValue(), lastHolderId.get(e.getKey())));
+        }
         return out.stream().filter(Objects::nonNull).toList();
+    }
+
+    private static HeatingCoilDefinition mergeHeatingCoil(HeatingCoilDefinition a, HeatingCoilDefinition b) {
+        List<ConsumeOption> merged = new ArrayList<>(a.consume() != null ? a.consume() : List.of());
+        if (b.consume() != null) {
+            merged.addAll(b.consume());
+        }
+        return new HeatingCoilDefinition(
+                a.id(), a.duration(), List.copyOf(merged), a.allSides(), a.noItem(), a.noFluid(), a.noEnergy());
     }
 
     private static ResourceLocation childId(ResourceLocation holderId, int index, int total) {

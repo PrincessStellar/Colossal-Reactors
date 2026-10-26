@@ -687,7 +687,12 @@ public class ReactorBuilderScreen extends AbstractContainerScreen<ReactorBuilder
             designEditBox.visible = website;
             designEditBox.active = website;
             if (!website) {
-                designEditBox.setFocused(false);
+                // Widget-only clear leaves Screen.focused on the hidden box and blocks input.
+                if (getFocused() == designEditBox) {
+                    setFocused(null);
+                } else {
+                    designEditBox.setFocused(false);
+                }
             }
         }
         if (linkOpenButton != null) linkOpenButton.visible = showLink;

@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -129,21 +130,46 @@ public final class HeatSinkLoader {
 
     /**
      * Applies loaded datapack data: clears, then uses loaded list or internal defaults if empty.
+     * Same {@code valid_blocks}+{@code valid_liquids} → last definition wins.
      */
     public static void applyLoaded(List<HeatSinkDefinition> loaded) {
         DEFINITIONS.clear();
-        if (loaded != null && !loaded.isEmpty()) {
-            for (HeatSinkDefinition def : loaded) {
-                HeatSinkDefinition sanitized = DatapackSelectorValidator.sanitizeHeatSink(def);
-                if (sanitized != null) {
-                    DEFINITIONS.add(sanitized);
-                }
+        for (HeatSinkDefinition def : mergeLastWinsBySelectors(loaded)) {
+            HeatSinkDefinition sanitized = DatapackSelectorValidator.sanitizeHeatSink(def);
+            if (sanitized != null) {
+                DEFINITIONS.add(sanitized);
             }
         }
         if (DEFINITIONS.isEmpty()) {
             DEFINITIONS.addAll(buildInternalDefaults());
         }
         definitionsGeneration++;
+    }
+
+    /** Semantic key for addon replace / JEI dedupe. */
+    public static String mergeKey(HeatSinkDefinition def) {
+        if (def == null) {
+            return "";
+        }
+        return String.join("\u0001", def.validBlocks()) + "\u0002" + String.join("\u0001", def.validLiquids());
+    }
+
+    private static List<HeatSinkDefinition> mergeLastWinsBySelectors(@Nullable List<HeatSinkDefinition> loaded) {
+        if (loaded == null || loaded.isEmpty()) {
+            return List.of();
+        }
+        Map<String, HeatSinkDefinition> byKey = new LinkedHashMap<>();
+        for (HeatSinkDefinition def : loaded) {
+            if (def == null) {
+                continue;
+            }
+            String key = mergeKey(def);
+            if (key.isEmpty() || "\u0002".equals(key)) {
+                continue;
+            }
+            byKey.put(key, def);
+        }
+        return List.copyOf(byKey.values());
     }
 
     private static List<HeatSinkDefinition> buildInternalDefaults() {

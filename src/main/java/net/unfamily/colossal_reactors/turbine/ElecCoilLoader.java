@@ -20,7 +20,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Loads elec coil block definitions for turbine coil zone matching.
@@ -42,9 +44,35 @@ public final class ElecCoilLoader {
 
     public static void applyLoaded(List<ElecCoilDefinition> loaded) {
         synchronized (ElecCoilLoader.class) {
-            rawDatapackCoils = loaded != null ? List.copyOf(loaded) : List.of();
+            rawDatapackCoils = mergeLastWinsByValidBlocks(loaded);
             rebuildDefinitions();
         }
+    }
+
+    /**
+     * Same {@code valid_blocks} list → last definition wins (addon packs can replace a CR coil).
+     * Distinct selector lists stay additive.
+     */
+    private static List<ElecCoilDefinition> mergeLastWinsByValidBlocks(@Nullable List<ElecCoilDefinition> loaded) {
+        if (loaded == null || loaded.isEmpty()) {
+            return List.of();
+        }
+        Map<String, ElecCoilDefinition> byBlocks = new LinkedHashMap<>();
+        for (ElecCoilDefinition def : loaded) {
+            if (def == null || def.validBlocks().isEmpty()) {
+                continue;
+            }
+            byBlocks.put(mergeKey(def), def);
+        }
+        return List.copyOf(byBlocks.values());
+    }
+
+    /** Semantic key for addon replace / JEI dedupe. */
+    public static String mergeKey(ElecCoilDefinition def) {
+        if (def == null || def.validBlocks().isEmpty()) {
+            return "";
+        }
+        return String.join("\u0001", def.validBlocks());
     }
 
     private static void rebuildDefinitions() {

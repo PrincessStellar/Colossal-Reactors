@@ -15,7 +15,9 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Loads melter recipes from datapack (type colossal_reactors:melter_recipes).
@@ -34,12 +36,36 @@ public final class MelterRecipesLoader {
 
     public static void applyLoaded(List<MelterRecipe> loaded) {
         RECIPES.clear();
-        if (loaded == null || loaded.isEmpty()) return;
-        for (MelterRecipe recipe : loaded) {
+        for (MelterRecipe recipe : mergeLastWinsByInput(loaded)) {
             if (DatapackSelectorValidator.isMelterRecipeResolvable(recipe)) {
                 RECIPES.add(recipe);
             }
         }
+    }
+
+    /** Same input selector + count → last recipe wins (addon replace). */
+    public static String mergeKey(MelterRecipe recipe) {
+        if (recipe == null || recipe.inputId() == null) {
+            return "";
+        }
+        return (recipe.inputIsTag() ? "#" : "") + recipe.inputId() + "\u0001" + recipe.count();
+    }
+
+    private static List<MelterRecipe> mergeLastWinsByInput(@Nullable List<MelterRecipe> loaded) {
+        if (loaded == null || loaded.isEmpty()) {
+            return List.of();
+        }
+        Map<String, MelterRecipe> byKey = new LinkedHashMap<>();
+        for (MelterRecipe recipe : loaded) {
+            if (recipe == null) {
+                continue;
+            }
+            String key = mergeKey(recipe);
+            if (!key.isEmpty()) {
+                byKey.put(key, recipe);
+            }
+        }
+        return List.copyOf(byKey.values());
     }
 
     public static List<MelterRecipe> getAll() {

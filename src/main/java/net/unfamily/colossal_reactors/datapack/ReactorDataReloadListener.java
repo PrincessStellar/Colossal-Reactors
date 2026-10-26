@@ -235,7 +235,6 @@ public class ReactorDataReloadListener implements PreparableReloadListener {
                     if (def != null) coolant.put(def.coolantId(), def);
                 }
             } else if (TYPE_HEAT_SINKS.equals(type)) {
-                if (root.has("overwrite") && root.get("overwrite").getAsBoolean()) heatSinks.clear();
                 for (JsonElement e : entries) {
                     if (!e.isJsonObject()) continue;
                     HeatSinkDefinition def = HeatSinkLoader.parseEntry(e.getAsJsonObject(), source);
@@ -249,7 +248,6 @@ public class ReactorDataReloadListener implements PreparableReloadListener {
                     if (def != null) turbineGeneration.put(def.generationId(), def);
                 }
             } else if (TYPE_ELEC_COILS.equals(type)) {
-                if (root.has("overwrite") && root.get("overwrite").getAsBoolean()) elecCoils.clear();
                 for (JsonElement e : entries) {
                     if (!e.isJsonObject()) continue;
                     ElecCoilDefinition def = ElecCoilLoader.parseEntry(e.getAsJsonObject(), source);

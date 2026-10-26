@@ -616,7 +616,12 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
             designEditBox.visible = website;
             designEditBox.active = website;
             if (!website) {
-                designEditBox.setFocused(false);
+                // Widget-only clear leaves Screen.focused on the hidden box and blocks input.
+                if (getFocused() == designEditBox) {
+                    setFocused(null);
+                } else {
+                    designEditBox.setFocused(false);
+                }
             }
         }
         if (buttonBladeVariant != null) {
