@@ -100,11 +100,12 @@ public class ReactorBuilderScreen extends AbstractContainerScreen<ReactorBuilder
     private static final int FLUID_DUMP_Y = FLUID_BAR_Y + TANK_OUTER_H + DUMP_BUTTON_GAP_BELOW;
 
     /**
-     * Size above buttons (centered). Buffer/inventory: left 35, right 35+9*18=197.
+     * Size above buttons (centered). Buffer/inventory: left 45 matches 250-wide texture slots
+     * (was 35 on 230-wide).
      */
     private static final int SIZE_LABEL_Y = 18;
     /**
-     * Area buttons: ^ on row1; < V > on row2. Arrow block aligned with inventory left edge (35).
+     * Area buttons: ^ on row1; < V > on row2. Arrow block aligned with inventory left edge.
      */
     private static final int BUTTON_W = 14;
     private static final int BUTTON_H = 12;
@@ -113,10 +114,8 @@ public class ReactorBuilderScreen extends AbstractContainerScreen<ReactorBuilder
     private static final int GAP = 3;
     private static final int INVENTORY_LEFT_X = 45;
     private static final int ARROW_GROUP_WIDTH = 3 * BUTTON_W + 2 * GAP;  // 48
-    /**
-     * Arrow block left edge = inventory left edge (35).
-     */
-    private static final int GROUP_LEFT_X = INVENTORY_LEFT_X;
+    /** Arrow / Center / Preview sit just right of the tank (inventory stays at {@link #INVENTORY_LEFT_X}). */
+    private static final int GROUP_LEFT_X = FLUID_BAR_X + TANK_OUTER_W + GAP;
     private static final int BUTTON_UP_X = GROUP_LEFT_X + ARROW_GROUP_WIDTH / 2 - BUTTON_W / 2;
     private static final int BUTTON_OFFSET_L_X = BUTTON_UP_X - BUTTON_W - GAP;
     private static final int BUTTON_OFFSET_R_X = BUTTON_UP_X + BUTTON_W + GAP;
@@ -142,8 +141,10 @@ public class ReactorBuilderScreen extends AbstractContainerScreen<ReactorBuilder
      * On Website: PatternMode is replaced by Open Link; HeatSink stays visible blank/inactive.
      */
     private static final int RIGHT_EDGE_INSET = 12;
-    private static final int RIGHT_BUTTON_W = 44;
-    private static final int RIGHT_BLOCK_X = GUI_WIDTH - RIGHT_EDGE_INSET - (3 * RIGHT_BUTTON_W + 2 * GAP);
+    /** Sit immediately after the arrow cluster (same gap as on 230), then fill to the right inset. */
+    private static final int RIGHT_BLOCK_X = GROUP_LEFT_X + ARROW_GROUP_WIDTH + GAP;
+    private static final int RIGHT_BUTTON_W =
+            (GUI_WIDTH - RIGHT_EDGE_INSET - RIGHT_BLOCK_X - 2 * GAP) / 3; // 45 on 250-wide
     private static final int RIGHT_BUTTON_H = BUTTON_H;
     private static final int RIGHT_COL0_X = RIGHT_BLOCK_X;
     private static final int RIGHT_COL1_X = RIGHT_BLOCK_X + RIGHT_BUTTON_W + GAP;
@@ -556,14 +557,18 @@ public class ReactorBuilderScreen extends AbstractContainerScreen<ReactorBuilder
         return Component.literal(fuelId.getPath());
     }
 
+    private void playUiClick() {
+        if (minecraft != null && minecraft.getSoundManager() != null) {
+            minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+        }
+    }
+
     private void onCloseButtonClicked() {
         if (viewMode != ViewMode.BUILDER) {
-            if (minecraft != null && minecraft.getSoundManager() != null)
-                minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+            playUiClick();
             switchToBuilderView();
         } else {
-            if (minecraft != null && minecraft.getSoundManager() != null)
-                minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+            playUiClick();
             if (minecraft != null && minecraft.player != null) minecraft.player.closeContainer();
         }
     }
@@ -861,58 +866,71 @@ public class ReactorBuilderScreen extends AbstractContainerScreen<ReactorBuilder
             if (designEditBox != null && designEditBox.visible && isInWidget(x, y, designEditBox)) {
                 designEditBox.setValue("");
                 onDesignEdited("");
+                playUiClick();
                 return true;
             }
             if (viewMode == ViewMode.SIMULATION && coolantCycleButton != null && coolantCycleButton.visible && isInWidget(x, y, coolantCycleButton)) {
                 cycleSimulationCoolant(false);
+                playUiClick();
                 return true;
             }
             if (viewMode == ViewMode.SIMULATION && fuelCycleButton != null && fuelCycleButton.visible && isInWidget(x, y, fuelCycleButton)) {
                 cycleSimulationFuel(false);
+                playUiClick();
                 return true;
             }
             if (buttonOffsetLeft != null && buttonOffsetLeft.visible && isInWidget(x, y, buttonOffsetLeft)) {
                 sendSize(4, false);
+                playUiClick();
                 return true;
             }
             if (buttonOffsetRight != null && buttonOffsetRight.visible && isInWidget(x, y, buttonOffsetRight)) {
                 sendSize(5, false);
+                playUiClick();
                 return true;
             }
             if (isInBounds(x, y, leftPos + BUTTON_UP_X, topPos + ROW1_Y)) {
                 sendSize(0, false);
+                playUiClick();
                 return true;
             }
             if (buttonLeft != null && buttonLeft.active && isInBounds(x, y, leftPos + BUTTON_LEFT_X, topPos + ROW2_Y)) {
                 sendSize(1, false);
+                playUiClick();
                 return true;
             }
             if (buttonDown != null && buttonDown.active && isInBounds(x, y, leftPos + BUTTON_DOWN_X, topPos + ROW2_Y)) {
                 sendSize(3, false);
+                playUiClick();
                 return true;
             }
             if (buttonRight != null && buttonRight.active && isInBounds(x, y, leftPos + BUTTON_RIGHT_X, topPos + ROW2_Y)) {
                 sendSize(2, false);
+                playUiClick();
                 return true;
             }
             if (isInRightBlockButton(x, y, 0)) {
                 if (menu.getBlockEntity() != null)
                     PacketDistributor.sendToServer(new ReactorBuilderOptionPayload(menu.getBlockPos(), 1, false));  // Pattern previous
+                playUiClick();
                 return true;
             }
             if (isInRightBlockButton(x, y, 1) && !isWebsitePattern()) {
                 if (menu.getBlockEntity() != null)
                     PacketDistributor.sendToServer(new ReactorBuilderOptionPayload(menu.getBlockPos(), 2, false));  // PatternMode
+                playUiClick();
                 return true;
             }
             if (isInRightBlockButton(x, y, 2)) {
                 if (menu.getBlockEntity() != null && !isWebsitePattern())
                     PacketDistributor.sendToServer(new ReactorBuilderHeatSinkPayload(menu.getBlockPos(), false));  // HeatSink
+                playUiClick();
                 return true;
             }
             if (isInRightBlockButton(x, y, 3)) {
                 if (menu.getBlockEntity() != null)
                     PacketDistributor.sendToServer(new ReactorBuilderOptionPayload(menu.getBlockPos(), 0, true));  // OpenTop toggle
+                playUiClick();
                 return true;
             }
         }

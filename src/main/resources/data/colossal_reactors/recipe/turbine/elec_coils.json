@@ -100,7 +100,7 @@
     },
     {
       "valid_blocks": ["minecraft:crying_obsidian"],
-      "eff_coe": 1.2,
+      "eff_coe": 1.0,
       "eff_max": 1.5,
       "flow_coe": 2.8,
       "flow_max": 3.0
