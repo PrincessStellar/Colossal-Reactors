@@ -14,9 +14,12 @@ import net.unfamily.colossal_reactors.block.TurbineBuilderBlock;
 import net.unfamily.colossal_reactors.blockentity.ReactorBuilderBlockEntity;
 import net.unfamily.colossal_reactors.blockentity.TurbineBuilderBlockEntity;
 import net.unfamily.colossal_reactors.preview.BuilderPreviewMarkerLogic;
+import net.unfamily.iskalib.client.marker.AreaBorderRenderer;
 import net.unfamily.iskalib.client.marker.MarkRenderer;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -25,9 +28,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Per-player client footprint preview: markers scoped by builder block position via iskalib
- * {@link MarkRenderer#addBillboardMarker(BlockPos, BlockPos, int, int)} so overlapping previews
- * from different builders do not clear each other's world positions.
+ * Per-player client footprint preview: shell via {@link AreaBorderRenderer},
+ * interior markers via depth-tested {@link MarkRenderer} (merged into boxes where possible).
  */
 public final class BuilderPreviewTracker {
 
@@ -35,34 +37,28 @@ public final class BuilderPreviewTracker {
 
     private static final int WORLD_POLL_INTERVAL_TICKS = 5;
     private static final int REFRESH_COOLDOWN_TICKS = 20;
-    /** Self-heal marker display from layer cache (no server round-trip). */
     private static final int PERIODIC_RECONCILE_INTERVAL_TICKS = 40;
 
-    /** Wrong block overlay (must match {@link BuilderPreviewMarkerLogic}). */
     private static final int COLOR_OCCUPIED = BuilderPreviewMarkerLogic.COLOR_OCCUPIED;
     private static final int COLOR_ROD = BuilderPreviewMarkerLogic.COLOR_ROD;
     private static final int COLOR_ROD_CONTROLLER = BuilderPreviewMarkerLogic.COLOR_ROD_CONTROLLER;
     private static final int COLOR_FRAME_EDGE = BuilderPreviewMarkerLogic.COLOR_FRAME_EDGE;
     private static final int COLOR_CLOSURE_DECK = BuilderPreviewMarkerLogic.COLOR_CLOSURE_DECK;
+    private static final int COLOR_BLADE = BuilderPreviewMarkerLogic.COLOR_BLADE;
 
-    /** Baseline marker priority when multiple layers exist (occupied handled separately). */
     private static final int[] BASELINE_COLOR_PRIORITY = {
             COLOR_ROD_CONTROLLER,
-            COLOR_FRAME_EDGE,
             COLOR_CLOSURE_DECK,
             COLOR_ROD,
+            COLOR_BLADE,
     };
 
     private static final Set<BlockPos> activePreviews = ConcurrentHashMap.newKeySet();
     private static final Map<BlockPos, Integer> lastWorldStateHashByBuilder = new ConcurrentHashMap<>();
     private static final Map<BlockPos, Integer> refreshCooldownByBuilder = new ConcurrentHashMap<>();
-    /** World changed while a refresh was on cooldown; flush when cooldown expires. */
     private static final Set<BlockPos> pendingWorldRefreshByBuilder = ConcurrentHashMap.newKeySet();
-    /** Drops stale marker packets from an older footprint refresh (out-of-order network). */
     private static final Map<BlockPos, Integer> activeFootprintGeneration = new ConcurrentHashMap<>();
-    /** All logical marker colors per world cell (red may overlay rod/outline colors). */
     private static final Map<BlockPos, Map<BlockPos, Set<Integer>>> markerLayersByOwner = new ConcurrentHashMap<>();
-    /** Layer cache cleared on first marker of a new server footprint batch. */
     private static final Set<BlockPos> pendingLayerResetByOwner = ConcurrentHashMap.newKeySet();
 
     private static final int INVALID_FOOTPRINT_GENERATION = -1;
@@ -83,14 +79,17 @@ public final class BuilderPreviewTracker {
         BlockPos key = builderOrigin.immutable();
         if (active) {
             activePreviews.add(key);
+            Level level = Minecraft.getInstance().level;
+            if (level != null) {
+                refreshAreaBorder(level, key);
+            }
         } else {
             activePreviews.remove(key);
             clearTrackingForBuilder(key);
-            MarkRenderer.getInstance().clearBillboardMarkersForOwner(key);
+            clearRendererForBuilder(key);
         }
     }
 
-    /** Clears rendered markers only; keeps layer cache for local reconcile. */
     public static void clearMarkersForBuilder(BlockPos builderOrigin) {
         if (builderOrigin == null) {
             return;
@@ -100,10 +99,6 @@ public final class BuilderPreviewTracker {
         clearRendererForBuilder(key);
     }
 
-    /**
-     * Server footprint batch start: accept only markers with this generation.
-     * Layer cache is kept until the first marker of the new batch arrives.
-     */
     public static void applyFootprintClear(BlockPos builderOrigin, int footprintGeneration) {
         if (builderOrigin == null) {
             return;
@@ -112,6 +107,10 @@ public final class BuilderPreviewTracker {
         activeFootprintGeneration.put(key, footprintGeneration);
         pendingLayerResetByOwner.add(key);
         clearRendererForBuilder(key);
+        Level level = Minecraft.getInstance().level;
+        if (level != null && activePreviews.contains(key)) {
+            refreshAreaBorder(level, key);
+        }
     }
 
     public static void deactivateBuilder(BlockPos builderOrigin) {
@@ -119,9 +118,8 @@ public final class BuilderPreviewTracker {
     }
 
     public static void clearAll() {
-        MarkRenderer renderer = MarkRenderer.getInstance();
-        for (BlockPos key : activePreviews) {
-            renderer.clearBillboardMarkersForOwner(key);
+        for (BlockPos key : List.copyOf(activePreviews)) {
+            clearRendererForBuilder(key);
         }
         activePreviews.clear();
         lastWorldStateHashByBuilder.clear();
@@ -134,10 +132,6 @@ public final class BuilderPreviewTracker {
         lastPeriodicReconcileGameTime = Long.MIN_VALUE;
     }
 
-    /**
-     * Call when the client is about to request a footprint resync from the server.
-     * Clears renderer only (layer cache kept), snapshots world hash, and applies refresh cooldown.
-     */
     public static void onFootprintRefreshRequested(Level level, BlockPos builderOrigin) {
         if (level == null || builderOrigin == null) {
             return;
@@ -156,7 +150,6 @@ public final class BuilderPreviewTracker {
         refreshCooldownByBuilder.put(builderOrigin.immutable(), REFRESH_COOLDOWN_TICKS);
     }
 
-    /** Snapshot occupied blocks inside the footprint so the next world change can be detected. */
     public static void seedWorldHash(Level level, BlockPos builderOrigin) {
         if (level == null || builderOrigin == null) {
             return;
@@ -167,10 +160,6 @@ public final class BuilderPreviewTracker {
         }
     }
 
-    /**
-     * Re-resolve markers immediately when a block inside an active preview volume changes.
-     * Call from client block place/break hooks.
-     */
     public static void onBlockInPreviewChanged(Level level, BlockPos worldPos) {
         if (level == null || worldPos == null || activePreviews.isEmpty()) {
             return;
@@ -197,6 +186,10 @@ public final class BuilderPreviewTracker {
         if (pendingLayerResetByOwner.remove(owner)) {
             clearLayerCacheForBuilder(owner);
         }
+        // Shell edges are AreaBorder; ignore legacy frame-edge packets.
+        if (color == COLOR_FRAME_EDGE) {
+            return;
+        }
         BlockPos cell = worldPos.immutable();
         Level level = Minecraft.getInstance().level;
         if (level != null && color == COLOR_OCCUPIED) {
@@ -213,9 +206,6 @@ public final class BuilderPreviewTracker {
         syncResolvedMarker(owner, cell, duration);
     }
 
-    /**
-     * Returns builder origins that need a server footprint refresh because blocks inside the preview volume changed.
-     */
     public static List<BlockPos> pollBuildersNeedingWorldRefresh(Level level) {
         if (level == null || activePreviews.isEmpty()) {
             return List.of();
@@ -265,7 +255,6 @@ public final class BuilderPreviewTracker {
         return needsRefresh;
     }
 
-    /** Reconcile display from layer cache for every active preview (no server request). */
     public static void tickPeriodicReconcile(Level level) {
         if (level == null || activePreviews.isEmpty()) {
             return;
@@ -300,6 +289,31 @@ public final class BuilderPreviewTracker {
 
     private static void clearRendererForBuilder(BlockPos owner) {
         MarkRenderer.getInstance().clearBillboardMarkersForOwner(owner);
+        AreaBorderRenderer.getInstance().clearArea(areaBorderKey(owner));
+    }
+
+    private static Object areaBorderKey(BlockPos owner) {
+        return "cr_builder_area_" + owner.asLong();
+    }
+
+    private static void refreshAreaBorder(Level level, BlockPos owner) {
+        AABB volume = resolveFootprintVolume(level, owner);
+        if (volume == null) {
+            AreaBorderRenderer.getInstance().clearArea(areaBorderKey(owner));
+            return;
+        }
+        int minX = (int) Math.floor(volume.minX);
+        int minY = (int) Math.floor(volume.minY);
+        int minZ = (int) Math.floor(volume.minZ);
+        int maxX = (int) Math.floor(volume.maxX - 1e-6);
+        int maxY = (int) Math.floor(volume.maxY - 1e-6);
+        int maxZ = (int) Math.floor(volume.maxZ - 1e-6);
+        AreaBorderRenderer.getInstance().showArea(
+                areaBorderKey(owner),
+                new BlockPos(minX, minY, minZ),
+                new BlockPos(maxX, maxY, maxZ),
+                AreaBorderRenderer.DEFAULT_MACHINE_COLOR,
+                0);
     }
 
     private static void reconcileMarkersForBuilder(BlockPos owner) {
@@ -309,18 +323,23 @@ public final class BuilderPreviewTracker {
         }
         refreshLayerCacheFromWorld(level, owner);
         refreshAllMarkersForOwner(owner, BUILDER_PREVIEW_DURATION_TICKS);
+        if (activePreviews.contains(owner)) {
+            refreshAreaBorder(level, owner);
+        }
     }
 
-    /** Rebuild marker layer cache from live world state (same rules as server preview). */
     private static void refreshLayerCacheFromWorld(Level level, BlockPos owner) {
         BlockEntity be = level.getBlockEntity(owner);
         if (be == null) {
             return;
         }
         Map<BlockPos, Set<Integer>> fresh = new ConcurrentHashMap<>();
-        BuilderPreviewMarkerLogic.MarkerSink sink = (worldPos, color) -> fresh
-                .computeIfAbsent(worldPos.immutable(), k -> ConcurrentHashMap.newKeySet())
-                .add(color);
+        BuilderPreviewMarkerLogic.MarkerSink sink = (worldPos, color) -> {
+            if (color == COLOR_FRAME_EDGE) {
+                return;
+            }
+            fresh.computeIfAbsent(worldPos.immutable(), k -> ConcurrentHashMap.newKeySet()).add(color);
+        };
         if (be instanceof ReactorBuilderBlockEntity reactor) {
             BuilderPreviewMarkerLogic.forEachReactorMarker(level, reactor, owner, sink);
         } else if (be instanceof TurbineBuilderBlockEntity turbine) {
@@ -332,38 +351,87 @@ public final class BuilderPreviewTracker {
     }
 
     private static void syncResolvedMarker(BlockPos owner, BlockPos worldPos, int durationTicks) {
-        Map<BlockPos, Set<Integer>> layers = markerLayersByOwner.get(owner);
-        Set<Integer> colors = layers != null ? layers.get(worldPos) : null;
-        if (colors == null || colors.isEmpty()) {
-            refreshAllMarkersForOwner(owner, durationTicks);
-            return;
-        }
-        Level level = Minecraft.getInstance().level;
-        Integer resolved = level != null ? resolveDisplayColor(level, worldPos, colors) : null;
-        if (resolved == null) {
-            refreshAllMarkersForOwner(owner, durationTicks);
-        } else {
-            MarkRenderer.getInstance().addBillboardMarker(owner, worldPos, resolved, durationTicks);
-        }
+        // Full refresh keeps box merges coherent when a single cell arrives mid-batch.
+        refreshAllMarkersForOwner(owner, durationTicks);
     }
 
     private static void refreshAllMarkersForOwner(BlockPos owner, int durationTicks) {
         Map<BlockPos, Set<Integer>> layers = markerLayersByOwner.get(owner);
         if (layers == null || layers.isEmpty()) {
             clearRendererForBuilder(owner);
+            Level level = Minecraft.getInstance().level;
+            if (level != null && activePreviews.contains(owner)) {
+                refreshAreaBorder(level, owner);
+            }
             return;
         }
         Level level = Minecraft.getInstance().level;
         if (level == null) {
             return;
         }
-        clearRendererForBuilder(owner);
+        MarkRenderer.getInstance().clearBillboardMarkersForOwner(owner);
+        Map<BlockPos, Integer> resolved = new HashMap<>();
         for (Map.Entry<BlockPos, Set<Integer>> entry : layers.entrySet()) {
-            Integer resolved = resolveDisplayColor(level, entry.getKey(), entry.getValue());
-            if (resolved != null) {
-                MarkRenderer.getInstance().addBillboardMarker(owner, entry.getKey(), resolved, durationTicks);
+            Integer color = resolveDisplayColor(level, entry.getKey(), entry.getValue());
+            if (color != null) {
+                resolved.put(entry.getKey(), color);
             }
         }
+        emitMergedBoxes(owner, resolved, durationTicks);
+        if (activePreviews.contains(owner)) {
+            refreshAreaBorder(level, owner);
+        }
+    }
+
+    /** Greedy merge of same-color cells into inclusive AABBs (fewer draw calls). */
+    private static void emitMergedBoxes(BlockPos owner, Map<BlockPos, Integer> resolved, int durationTicks) {
+        Set<BlockPos> remaining = new HashSet<>(resolved.keySet());
+        MarkRenderer renderer = MarkRenderer.getInstance();
+        while (!remaining.isEmpty()) {
+            BlockPos start = remaining.iterator().next();
+            int color = resolved.get(start);
+            int x0 = start.getX();
+            int y0 = start.getY();
+            int z0 = start.getZ();
+            int x1 = x0;
+            int y1 = y0;
+            int z1 = z0;
+
+            while (sameColor(resolved, remaining, x1 + 1, y0, z0, x1 + 1, y1, z1, color)) {
+                x1++;
+            }
+            while (sameColor(resolved, remaining, x0, y1 + 1, z0, x1, y1 + 1, z1, color)) {
+                y1++;
+            }
+            while (sameColor(resolved, remaining, x0, y0, z1 + 1, x1, y1, z1 + 1, color)) {
+                z1++;
+            }
+
+            for (int x = x0; x <= x1; x++) {
+                for (int y = y0; y <= y1; y++) {
+                    for (int z = z0; z <= z1; z++) {
+                        remaining.remove(new BlockPos(x, y, z));
+                    }
+                }
+            }
+            renderer.addOwnedBox(owner, new BlockPos(x0, y0, z0), new BlockPos(x1, y1, z1),
+                    color, durationTicks, false);
+        }
+    }
+
+    private static boolean sameColor(Map<BlockPos, Integer> resolved, Set<BlockPos> remaining,
+                                     int x0, int y0, int z0, int x1, int y1, int z1, int color) {
+        for (int x = x0; x <= x1; x++) {
+            for (int y = y0; y <= y1; y++) {
+                for (int z = z0; z <= z1; z++) {
+                    BlockPos p = new BlockPos(x, y, z);
+                    if (!remaining.contains(p) || resolved.getOrDefault(p, Integer.MIN_VALUE) != color) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
     }
 
     @Nullable
@@ -380,7 +448,7 @@ public final class BuilderPreviewTracker {
             }
         }
         for (int color : layers) {
-            if (color != COLOR_OCCUPIED) {
+            if (color != COLOR_OCCUPIED && color != COLOR_FRAME_EDGE) {
                 return color;
             }
         }
