@@ -7,22 +7,34 @@ import java.util.List;
 import java.util.function.BiPredicate;
 
 /**
- * Rod column placement for turbine builder preview/build.
- * Efficient / Productive affect blade ring growth only ({@link #targetBladeRingForLayer}), not which columns get rods.
- * Hyperflow places a multi-rod grid; Website uses an external design seed (no built-in columns until applied).
+ * Rod column placement and blade-ring growth for the Turbine Builder.
+ * Modes: Website / Flow / HyperFlow / Custom / None.
+ * Flow and HyperFlow share an Efficient↔Productive variant (climb vs full rings).
  */
 public final class TurbineRodPatternLogic {
 
     public static final int PATTERN_WEBSITE = 0;
-    public static final int PATTERN_EFFICIENT = 1;
-    public static final int PATTERN_PRODUCTIVE = 2;
-    public static final int PATTERN_HYPERFLOW = 3;
+    /** Single center shaft; growth from {@link #VARIANT_EFFICIENT} / {@link #VARIANT_PRODUCTIVE}. */
+    public static final int PATTERN_FLOW = 1;
+    /** Staggered multi-rod grid; growth from variant. */
+    public static final int PATTERN_HYPERFLOW = 2;
     /** Frame + partition wall + coils only (no rods / blades / rod controller). */
-    public static final int PATTERN_CUSTOM = 4;
+    public static final int PATTERN_CUSTOM = 3;
     /** Frame + partition wall only (no rods / blades / coils / rod controller). */
-    public static final int PATTERN_NONE = 5;
+    public static final int PATTERN_NONE = 4;
 
-    public static final int PATTERN_COUNT = 6;
+    public static final int PATTERN_COUNT = 5;
+
+    /** Climb rings (+1 per layer). Default for Flow / HyperFlow. */
+    public static final int VARIANT_EFFICIENT = 0;
+    /** Full rings on every layer. */
+    public static final int VARIANT_PRODUCTIVE = 1;
+    public static final int VARIANT_COUNT = 2;
+
+    /** Growth id for {@link #targetBladeRingForLayer}: climb. */
+    public static final int GROWTH_CLIMB = 0;
+    /** Growth id for {@link #targetBladeRingForLayer}: full rings. */
+    public static final int GROWTH_FULL = 1;
 
     private TurbineRodPatternLogic() {}
 
@@ -37,6 +49,10 @@ public final class TurbineRodPatternLogic {
 
     public static int rodSpaceDepth(int turbineDepth) {
         return TurbineRodSpaceLayout.interiorDepth(turbineDepth);
+    }
+
+    public static boolean usesBladeVariantToggle(int pattern) {
+        return pattern == PATTERN_FLOW || pattern == PATTERN_HYPERFLOW;
     }
 
     /**
@@ -62,7 +78,7 @@ public final class TurbineRodPatternLogic {
             return websiteOverride != null && websiteOverride.test(rx, rz);
         }
         return switch (pattern) {
-            case PATTERN_EFFICIENT, PATTERN_PRODUCTIVE -> {
+            case PATTERN_FLOW -> {
                 TurbineRodControllerLayout.Center center = TurbineRodControllerLayout.bestPrimaryCenter(rw, rd);
                 yield rx == center.rx() && rz == center.rz();
             }
@@ -73,17 +89,23 @@ public final class TurbineRodPatternLogic {
     }
 
     /**
-     * Multi-rod grid with a one-cell margin from interior walls (matches moddecoded calculator rod grid).
+     * Classic HyperFlow: ModDecoded staggered multi-rod grid (phase {@code a=1}), same family as
+     * {@code mdct1.9.9.9.f.3.gold.1.a.-.ABEAARABAA} on a 7×7 interior.
      */
     private static boolean isHyperflowColumn(int rx, int rz, int rw, int rd) {
         if (rw < 3 || rd < 3) {
             TurbineRodControllerLayout.Center center = TurbineRodControllerLayout.bestPrimaryCenter(rw, rd);
             return rx == center.rx() && rz == center.rz();
         }
-        if (rx < 1 || rz < 1 || rx > rw - 2 || rz > rd - 2) {
+        if (rz < 1 || rz >= rd || (rz & 1) == 0) {
             return false;
         }
-        return ((rx - 1) % 2 == 0) && ((rz - 1) % 2 == 0);
+        int row = (rz - 1) / 2;
+        int x0 = (1 + (row % 2) * 2) % 4;
+        if (rx < x0 || rx >= rw) {
+            return false;
+        }
+        return ((rx - x0) % 4) == 0;
     }
 
     /** All rod-column centers for a built-in pattern. */
@@ -108,7 +130,6 @@ public final class TurbineRodPatternLogic {
     /**
      * Single rod-controller column for builder/preview: among {@link #rodColumns}, prefer the
      * geometric primary center when it is a rod column, otherwise the closest rod column.
-     * Runtime validation still requires exactly one controller in the world.
      */
     @Nullable
     public static TurbineRodControllerLayout.Center controllerColumn(
@@ -151,12 +172,26 @@ public final class TurbineRodPatternLogic {
         return pattern == PATTERN_CUSTOM || pattern == PATTERN_NONE || pattern == PATTERN_WEBSITE;
     }
 
-    /** Blade-ring growth pattern for Website designs: climb → Efficient, full → Productive. */
-    public static int bladeGrowthPattern(int rodPattern, boolean websiteClimbProfile) {
+    /**
+     * Resolves climb vs full growth for build/sim.
+     * Website uses the seed climb profile; Flow / HyperFlow use {@code bladeVariant}.
+     */
+    public static int resolveBladeGrowth(int rodPattern, int bladeVariant, boolean websiteClimbProfile) {
         if (rodPattern == PATTERN_WEBSITE) {
-            return websiteClimbProfile ? PATTERN_EFFICIENT : PATTERN_PRODUCTIVE;
+            return websiteClimbProfile ? GROWTH_CLIMB : GROWTH_FULL;
         }
-        return rodPattern;
+        if (rodPattern == PATTERN_FLOW || rodPattern == PATTERN_HYPERFLOW) {
+            return bladeVariant == VARIANT_PRODUCTIVE ? GROWTH_FULL : GROWTH_CLIMB;
+        }
+        return GROWTH_FULL;
+    }
+
+    /**
+     * @deprecated use {@link #resolveBladeGrowth(int, int, boolean)}
+     */
+    @Deprecated
+    public static int bladeGrowthPattern(int rodPattern, boolean websiteClimbProfile) {
+        return resolveBladeGrowth(rodPattern, VARIANT_EFFICIENT, websiteClimbProfile);
     }
 
     /** True when the pattern also skips coil placement. */
@@ -171,14 +206,28 @@ public final class TurbineRodPatternLogic {
 
     /**
      * Target blade ring index for rotor layer {@code ry} (0 = bottom along growth axis).
-     * Efficient / Hyperflow: +1 ring per layer up to max.
-     * Productive: full rings on every layer immediately.
+     * {@link #GROWTH_FULL}: max rings every layer; {@link #GROWTH_CLIMB}: {@code 1+ry}.
      */
-    public static int targetBladeRingForLayer(int ry, int rh, int pattern) {
+    public static int targetBladeRingForLayer(int ry, int rh, int growth) {
         int maxRing = TurbineBladePlacement.maxRing();
-        if (pattern == PATTERN_PRODUCTIVE) {
+        if (growth == GROWTH_FULL) {
             return maxRing;
         }
         return Math.min(maxRing, 1 + ry);
+    }
+
+    /**
+     * Migrates a pre-2.5.1 {@code RodPattern} (6 values: Website/Eff/Prod/Hyper/Custom/None)
+     * into mode + variant. Returns {@code int[]{pattern, variant}}.
+     */
+    public static int[] migrateLegacyRodPattern(int legacyPattern) {
+        return switch (legacyPattern) {
+            case 1 -> new int[]{PATTERN_FLOW, VARIANT_EFFICIENT};
+            case 2 -> new int[]{PATTERN_FLOW, VARIANT_PRODUCTIVE};
+            case 3 -> new int[]{PATTERN_HYPERFLOW, VARIANT_PRODUCTIVE};
+            case 4 -> new int[]{PATTERN_CUSTOM, VARIANT_EFFICIENT};
+            case 5 -> new int[]{PATTERN_NONE, VARIANT_EFFICIENT};
+            default -> new int[]{PATTERN_WEBSITE, VARIANT_EFFICIENT};
+        };
     }
 }

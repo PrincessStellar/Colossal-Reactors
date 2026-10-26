@@ -68,6 +68,8 @@ public final class BuilderWebsiteDesigns {
 
     /**
      * Applies a decoded turbine design: centered size, WEBSITE pattern, coil layers/type, and rod mask.
+     * Coil fill {@code o} ({@link ModDecodedTurbineDesign#coilFillOne()}) is ignored on purpose —
+     * build and Website sim always fill the entire coil zone (ModDecoded builder contract).
      */
     public static boolean applyToTurbineBuilder(TurbineBuilderBlockEntity builder, String raw) {
         Optional<ModDecodedTurbineDesign> parsed = parseTurbine(raw);
@@ -80,6 +82,7 @@ public final class BuilderWebsiteDesigns {
         return applyToTurbineBuilder(builder, parsed.get());
     }
 
+    /** @see #applyToTurbineBuilder(TurbineBuilderBlockEntity, String) for coil-fill {@code o} policy */
     public static boolean applyToTurbineBuilder(TurbineBuilderBlockEntity builder, ModDecodedTurbineDesign design) {
         if (builder == null || design == null) {
             return false;

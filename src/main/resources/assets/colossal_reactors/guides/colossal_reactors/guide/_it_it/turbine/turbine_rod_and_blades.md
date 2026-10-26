@@ -55,15 +55,15 @@ Su alcuni pack, solo gli **anelli pari** (4, 8, 12 blade su uno strato, ecc.) co
 Se la turbina ha **una qualsiasi colonna di rod** la cui cella sul deck di chiusura **non** è un [Turbine Rod Controller](turbine_structure.md), l’efficienza blade è moltiplicata per **0,95 (−5%)**.
 
 - Un solo controller su un albero singolo: nessuna penalità.
-- Layout multi-colonna (**Hyperflow**, seed Website, build a mano): metti un controller su **ogni colonna** per annullare il −5%.
+- Layout multi-colonna (**HyperFlow**, seed Website, build a mano): metti un controller su **ogni colonna** per annullare il −5%.
 
 ## Layout del builder
 
 Il [Turbine Builder](turbine_builder.md) può posizionare rod, blade e rod controller per te:
 
-- **Efficient** — una colonna rod centrale; gli anelli blade **salgono** strato per strato (miglior bonus altezza).
-- **Productive** — stessa colonna singola; ogni strato ottiene subito il **massimo** di anelli.
-- **Hyperflow** — griglia multi-rod (con margine di una cella dalle pareti); il builder mette un **rod controller su ogni colonna**.
-- **Website** — rod da un seed di design importato; la crescita blade segue salita/pieno come Efficient/Productive.
+- **Website** — rod da un seed di design importato; la crescita blade segue il profilo climb/pieno del seed.
+- **Flow** — una colonna rod centrale. Un secondo controllo alterna **Efficiente** (anelli blade **salgono** strato per strato) o **Produttivo** (anelli pieni a ogni strato).
+- **HyperFlow** — griglia multi-rod sfalsata (con margine di una cella dalle pareti); il builder mette un **rod controller su ogni colonna**. Stesso toggle Efficiente / Produttivo di Flow.
+- **Custom / None** — guscio (e coil per Custom) senza contenuto rotore.
 
 Posizionare le blade a mano con l’item segue lo stesso ordine di anelli del builder.

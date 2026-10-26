@@ -373,6 +373,7 @@
     "gui.colossal_reactors.turbine_builder.pattern.1": "Eficiente",
     "gui.colossal_reactors.turbine_builder.pattern.2": "Produtivo",
     "gui.colossal_reactors.turbine_builder.pattern.3": "Hiperfluxo",
+    "gui.colossal_reactors.turbine_builder.hint.coil_fill_one": "Website import fills the whole coil zone.",
     "gui.colossal_reactors.turbine_builder.tooltip.pattern.0": "Importa um design da calculadora de terceiros ModDecoded.",
     "gui.colossal_reactors.turbine_builder.tooltip.pattern.1": "Anéis de hélices em menos camadas (maior eficiência por hélice).",
     "gui.colossal_reactors.turbine_builder.tooltip.pattern.2": "Anéis de hélices em mais camadas (maior vazão).",

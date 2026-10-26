@@ -452,10 +452,12 @@ public final class TurbineBuildLogic {
                         continue;
                     }
                     Direction axis = rodState.getValue(TurbineRodBlock.FACING);
-                    int bladePattern = TurbineRodPatternLogic.bladeGrowthPattern(
-                            builder.getRodPattern(), builder.isWebsiteClimbProfile());
+                    int growth = TurbineRodPatternLogic.resolveBladeGrowth(
+                            builder.getRodPattern(), builder.getBladeVariant(), builder.isWebsiteClimbProfile());
+                    // Shell + pattern/design ring only (no neighbor Chebyshev pre-cap): matches ModDecoded HUD /
+                    // placeNextBlade; physical collisions still stop placement.
                     int targetRing = TurbineBladePlacement.effectiveTargetBladeRing(
-                            layout, t, bladePattern, ca, cb, columns, ringCap);
+                            layout, t, growth, ca, cb, List.of(), ringCap);
                     if (placeBladesToRing(level, builder, rodPos, rodState, axis, targetRing)) {
                         builder.setBuildRodCursor(ca, t, cb);
                         return true;

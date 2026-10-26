@@ -151,6 +151,7 @@ public class TurbineBuilderMenu extends AbstractContainerMenu {
     public int getHeatSinkIndex() { return getSelectedCoilIndex(); }
     public int getCoilLayerCount() { return sizeData.get(8); }
     public int getRodPattern() { return sizeData.get(9); }
+    public int getBladeVariant() { return sizeData.get(17); }
     public boolean isOpenTop() { return sizeData.get(10) != 0; }
     @Deprecated
     public int getPatternMode() { return 0; }

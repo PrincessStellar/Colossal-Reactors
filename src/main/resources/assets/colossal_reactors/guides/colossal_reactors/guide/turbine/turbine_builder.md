@@ -22,11 +22,10 @@ The **Turbine Builder** builds the turbine for you from items in its inventory�
 2. **Open** the screen and set **width, height, and depth** (within your pack’s size limit).
 3. Stock the builder with **casing**, **glass**, **rod controllers** (one per rod column the pattern needs), **rods**, **blades**, and the **storage blocks** you want for coils.
 4. Pick a **layout** (see [Rods and blades](turbine_rod_and_blades.md)):
-   - **Efficient** — one center shaft; blades climb ring by ring (**+3%** height bonus possible).
-   - **Productive** — one center shaft; full rings every layer (maximum steam sooner).
-   - **Hyperflow** — multi-rod grid; places a **rod controller on each column** (no −5% missing-controller penalty).
    - **Website** — paste a design **seed / URL** into the design field; rods (and coil choice on Website) follow that layout.
-   - **Custom / None** — frame (and coils for Custom) without rotor contents.
+   - **Flow** — one center shaft. Below the pattern row, toggle **Efficient** (climb rings, **+3%** height bonus possible) or **Productive** (full rings every layer).
+   - **HyperFlow** — multi-rod staggered grid; places a **rod controller on each column** (no −5% missing-controller penalty). Same Efficient / Productive toggle as Flow.
+   - **Custom / None** — frame (and coils for Custom) without rotor contents; the long button under the pattern row stays empty and disabled.
 5. Choose **coil type** (cycles supported metals; editable on Website too) and **coil layer count** (wide button under Preview, next to it).
 6. Use **Preview** (under Center, same width) and the **Simulation** panel for RF/t, steam, and materials. Warnings appear **beside Center**.
 7. **Mark Input** (just above the builder buffer):

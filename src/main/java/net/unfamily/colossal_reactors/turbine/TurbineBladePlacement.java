@@ -42,8 +42,10 @@ public final class TurbineBladePlacement {
     }
 
     /**
-     * Shell clearance, further capped so blade rings stop one cell before neighboring rod columns
-     * (Chebyshev distance − 1). Matches ModDecoded multi-rod blade packing.
+     * Shell clearance, optionally further capped so blade rings stop one cell before neighboring rod
+     * columns (Chebyshev distance − 1). Builder / Metrics use the no-{@code allColumns} form so multi-rod
+     * rings match the ModDecoded calculator HUD and in-game {@link #placeNextBlade}; pass columns only
+     * when an explicit neighbor pre-cap is required.
      */
     public static int maxRingForRodColumn(
             int crossA, int crossB, int crossSizeA, int crossSizeB,

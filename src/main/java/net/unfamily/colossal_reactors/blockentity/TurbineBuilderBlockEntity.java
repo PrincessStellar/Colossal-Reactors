@@ -70,6 +70,7 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
     private static final String TAG_SIM_GENERATION_IDX = "SimGenerationIdx";
     private static final String TAG_OPEN_TOP = "OpenTop";
     private static final String TAG_ROD_PATTERN = "RodPattern";
+    private static final String TAG_BLADE_VARIANT = "BladeVariant";
     private static final String TAG_PATTERN_MODE = "PatternMode";
     private static final String TAG_BUILDING = "Building";
     private static final String TAG_INVALID_BLOCKS = "InvalidBlocks";
@@ -188,8 +189,10 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
     /** When built: true = absolute top face open (no top casing); rod controller still placed. */
     private boolean openTop = false;
     private int coilLayerCount = net.unfamily.colossal_reactors.Config.TURBINE_DEFAULT_COIL_LAYER_COUNT.get();
-    /** Blade growth pattern: 0=Efficient, 1=Productive. */
-    private int rodPattern = 0;
+    /** Builder mode: Website / Flow / HyperFlow / Custom / None. */
+    private int rodPattern = TurbineRodPatternLogic.PATTERN_WEBSITE;
+    /** Efficient (climb) / Productive (full); used by Flow and HyperFlow. */
+    private int bladeVariant = TurbineRodPatternLogic.VARIANT_EFFICIENT;
     /** Rod / rod-controller facing axis (default D-U: bottom to top). */
     private Direction placementAxis = TurbinePlacementAxis.DOWN_UP.facing();
     /** Pattern mode: 0=OPTIMIZED (-2 inset), 1=PRODUCTION (no inset), 2=ECONOMY (like optimized, border fill differs). */
@@ -206,6 +209,8 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
     @Nullable
     private transient boolean[] websiteRodMaskCache;
     private transient boolean websiteClimbProfile;
+    /** Cached {@code mdct1} coil fill {@code o}; Builder still fills the whole coil zone. */
+    private transient boolean websiteCoilFillOne;
     /** Cached {@code mdct1} ring cap; {@link Integer#MAX_VALUE} when no valid website design. */
     private transient int websiteBladeRing = Integer.MAX_VALUE;
     private transient int websiteCacheW = -1;
@@ -219,6 +224,7 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
     private int buildHeatLx = Integer.MIN_VALUE, buildHeatLy = Integer.MIN_VALUE, buildHeatLz = Integer.MIN_VALUE;
 
     private static final int ROD_PATTERN_COUNT = TurbineRodPatternLogic.PATTERN_COUNT;
+    private static final int BLADE_VARIANT_COUNT = TurbineRodPatternLogic.VARIANT_COUNT;
     private static final int COIL_LAYER_MIN = 1;
     private static final int COIL_LAYER_MAX = 32;
 
@@ -279,6 +285,7 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
                 case 14 -> buildProgressVisible ? 1 : 0;
                 case 15 -> placementAxis.ordinal();
                 case 16 -> getSimGenerationIndex();
+                case 17 -> bladeVariant;
                 default -> 0;
             };
         }
@@ -286,7 +293,8 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
         @Override
         public void set(int index, int value) {
             if (index >= 4 && index != 7 && index != 8 && index != 9 && index != 10 && index != 11
-                    && index != 12 && index != 13 && index != 14 && index != 15 && index != 16) {
+                    && index != 12 && index != 13 && index != 14 && index != 15 && index != 16
+                    && index != 17) {
                 return;
             }
             switch (index) {
@@ -323,13 +331,14 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
                     }
                 }
                 case 16 -> simGenerationIndex = Math.max(0, value);
+                case 17 -> bladeVariant = Math.max(0, Math.min(BLADE_VARIANT_COUNT - 1, value));
                 default -> {}
             }
         }
 
         @Override
         public int getCount() {
-            return 17;
+            return 18;
         }
     };
 
@@ -452,6 +461,15 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
         setChanged();
     }
 
+    public int getBladeVariant() {
+        return bladeVariant;
+    }
+
+    public void setBladeVariant(int variant) {
+        this.bladeVariant = Math.max(0, Math.min(BLADE_VARIANT_COUNT - 1, variant));
+        setChanged();
+    }
+
     public void setSelectedCoilIndex(int index) {
         this.selectedCoilIndex = Math.max(0, Math.min(ElecCoilLoader.getCoilOptionCount() - 1, index));
         setChanged();
@@ -511,6 +529,15 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
     }
 
     /**
+     * True when the seed asks for coil fill {@code o} (one block).
+     * Build and Website sim still fill the whole coil zone; use for GUI hints only.
+     */
+    public boolean isWebsiteCoilFillOne() {
+        ensureWebsiteRodCache();
+        return websiteRodMaskCache != null && websiteCoilFillOne;
+    }
+
+    /**
      * Blade ring cap from the website design ({@code mdct1} ring field).
      * {@link Integer#MAX_VALUE} when no valid website design is loaded.
      */
@@ -555,6 +582,7 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
     private void refreshWebsiteRodCache(ModDecodedTurbineDesign design) {
         websiteRodMaskCache = design.rodMask().clone();
         websiteClimbProfile = design.climbProfile();
+        websiteCoilFillOne = design.coilFillOne();
         websiteBladeRing = Math.max(0, design.ring());
         websiteCacheW = design.exteriorX();
         websiteCacheD = design.exteriorZ();
@@ -563,6 +591,7 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
     private void invalidateWebsiteRodCache() {
         websiteRodMaskCache = null;
         websiteClimbProfile = false;
+        websiteCoilFillOne = false;
         websiteBladeRing = Integer.MAX_VALUE;
         websiteCacheW = -1;
         websiteCacheD = -1;
@@ -691,10 +720,27 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
         setChanged();
     }
 
-    /** Cycle rod pattern: Efficient / Productive. */
+    /** Cycle builder mode: Website / Flow / HyperFlow / Custom / None. */
     public void cycleRodPattern(boolean next) {
         if (next) rodPattern = (rodPattern + 1) % ROD_PATTERN_COUNT;
         else rodPattern = rodPattern <= 0 ? ROD_PATTERN_COUNT - 1 : rodPattern - 1;
+        // Default Efficient whenever entering Flow / HyperFlow.
+        if (TurbineRodPatternLogic.usesBladeVariantToggle(rodPattern)) {
+            bladeVariant = TurbineRodPatternLogic.VARIANT_EFFICIENT;
+        }
+        setChanged();
+    }
+
+    /** Cycle Efficient ↔ Productive (Flow / HyperFlow). */
+    public void cycleBladeVariant(boolean next) {
+        if (!TurbineRodPatternLogic.usesBladeVariantToggle(rodPattern)) {
+            return;
+        }
+        if (next) {
+            bladeVariant = (bladeVariant + 1) % BLADE_VARIANT_COUNT;
+        } else {
+            bladeVariant = bladeVariant <= 0 ? BLADE_VARIANT_COUNT - 1 : bladeVariant - 1;
+        }
         setChanged();
     }
 
@@ -882,6 +928,7 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
         output.putInt(TAG_SIM_GENERATION_IDX, getSimGenerationIndex());
         output.putInt("CoilLayerCount", coilLayerCount);
         output.putInt(TAG_ROD_PATTERN, rodPattern);
+        output.putInt(TAG_BLADE_VARIANT, bladeVariant);
         output.putString(TAG_PLACEMENT_AXIS, placementAxis.getName());
         output.putBoolean(TAG_OPEN_TOP, openTop);
         output.putBoolean(TAG_BUILDING, building);
@@ -958,7 +1005,17 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
         input.getInt(TAG_SIM_GENERATION_IDX).ifPresent(v -> simGenerationIndex = Math.max(0, v));
         input.getInt("CoilLayerCount").ifPresent(v -> coilLayerCount = Math.max(COIL_LAYER_MIN, Math.min(COIL_LAYER_MAX, v)));
         clampCoilLayerCountToFit();
-        input.getInt(TAG_ROD_PATTERN).ifPresent(v -> rodPattern = Math.max(0, Math.min(ROD_PATTERN_COUNT - 1, v)));
+        if (input.getInt(TAG_ROD_PATTERN).isPresent()) {
+            int raw = input.getIntOr(TAG_ROD_PATTERN, TurbineRodPatternLogic.PATTERN_WEBSITE);
+            if (input.getInt(TAG_BLADE_VARIANT).isPresent()) {
+                rodPattern = Math.max(0, Math.min(ROD_PATTERN_COUNT - 1, raw));
+                bladeVariant = Math.max(0, Math.min(BLADE_VARIANT_COUNT - 1, input.getIntOr(TAG_BLADE_VARIANT, 0)));
+            } else {
+                int[] migrated = TurbineRodPatternLogic.migrateLegacyRodPattern(raw);
+                rodPattern = migrated[0];
+                bladeVariant = migrated[1];
+            }
+        }
         String websiteRaw = input.getStringOr(TAG_WEBSITE_DESIGN, "");
         if (websiteRaw != null && !websiteRaw.isEmpty()) {
             websiteDesignCode = websiteRaw;

@@ -62,6 +62,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
 /**
@@ -1124,7 +1125,7 @@ public class ReactorBuilderScreen extends AbstractContainerScreen<ReactorBuilder
         return ReactorBuildMaterialCounter.estimate(
                 sizeLeft, sizeRight, menu.getSizeH(), menu.getSizeD(),
                 menu.getRodPattern(), menu.getPatternMode(), menu.getHeatSinkIndex(), menu.isOpenTop(),
-                masks.rodOverride(), masks.heatSinkCell());
+                masks.rodOverride(), masks.materialHeatSinkCell());
     }
 
     /** Current coolant for simulation: null = None (index 0), else the selected definition. */
@@ -1160,23 +1161,36 @@ public class ReactorBuilderScreen extends AbstractContainerScreen<ReactorBuilder
                 sizeLeft, sizeRight, sizeHeight, sizeDepth,
                 menu.getRodPattern(), menu.getPatternMode(), menu.getHeatSinkIndex(),
                 simulationFuelId, coolantDef,
-                masks.rodOverride(), masks.heatSinkCell());
+                masks.rodOverride(), masks.simHeatSinkCell(), masks.heatSinkOption());
     }
 
     private record WebsiteSimMasks(
             @Nullable BiPredicate<Integer, Integer> rodOverride,
-            @Nullable BiPredicate<Integer, Integer> heatSinkCell) {}
+            /** Non-air / non-rod cells only — materials and build progress skip empty air. */
+            @Nullable BiPredicate<Integer, Integer> materialHeatSinkCell,
+            /** Includes air (runtime heat sink); excludes rod columns. */
+            @Nullable BiPredicate<Integer, Integer> simHeatSinkCell,
+            /** Per-cell heat-sink option index for Website simulation modifiers. */
+            @Nullable BiFunction<Integer, Integer, Integer> heatSinkOption) {}
 
     private WebsiteSimMasks websiteSimMasks() {
         var be = menu.getBlockEntity();
         if (!isWebsitePattern() || be == null || !be.hasValidWebsiteDesign()) {
-            return new WebsiteSimMasks(null, null);
+            return new WebsiteSimMasks(null, null, null, null);
         }
         return new WebsiteSimMasks(
                 be::websiteIsRodColumn,
                 (rx, rz) -> {
                     String cell = be.getWebsiteCell(rx, rz);
                     return cell != null && !"air".equals(cell) && !"rod".equals(cell);
+                },
+                (rx, rz) -> !"rod".equals(be.getWebsiteCell(rx, rz)),
+                (rx, rz) -> {
+                    String cell = be.getWebsiteCell(rx, rz);
+                    if (cell == null || "air".equals(cell) || "rod".equals(cell)) {
+                        return 0;
+                    }
+                    return BuilderWebsiteDesigns.findHeatSinkOptionIndex(cell);
                 });
     }
 
