@@ -141,7 +141,7 @@ configurations {
 }
 
 dependencies {
-    implementation files('libs/iska_lib-1.12.0.1.4.jar')
+    implementation files('libs/iska_lib-1.13.0.0.0.jar')
     implementation "curse.maven:another-config-manager-1719301:9018479"
 
     // guideME optional dependency (CurseForge)

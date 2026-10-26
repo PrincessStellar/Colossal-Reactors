@@ -14,7 +14,7 @@ import net.unfamily.colossal_reactors.block.TurbineBuilderBlock;
 import net.unfamily.colossal_reactors.blockentity.ReactorBuilderBlockEntity;
 import net.unfamily.colossal_reactors.blockentity.TurbineBuilderBlockEntity;
 import net.unfamily.colossal_reactors.preview.BuilderPreviewMarkerLogic;
-import net.unfamily.iskalib.client.marker.AreaBorderRenderer;
+import net.unfamily.iskalib.client.marker.InsetAreaBorderRenderer;
 import net.unfamily.iskalib.client.marker.MarkRenderer;
 
 import java.util.ArrayList;
@@ -28,8 +28,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Per-player client footprint preview: shell via {@link AreaBorderRenderer},
- * interior markers via depth-tested {@link MarkRenderer} (merged into boxes where possible).
+ * Per-player client footprint preview: shell via {@link InsetAreaBorderRenderer},
+ * rods/blades as structure boxes, occupied/closure via depth-tested {@link MarkRenderer}.
  */
 public final class BuilderPreviewTracker {
 
@@ -79,10 +79,8 @@ public final class BuilderPreviewTracker {
         BlockPos key = builderOrigin.immutable();
         if (active) {
             activePreviews.add(key);
-            Level level = Minecraft.getInstance().level;
-            if (level != null) {
-                refreshAreaBorder(level, key);
-            }
+            // Structure boxes + inset border immediately (do not wait for block change / 40-tick reconcile).
+            reconcileMarkersForBuilder(key);
         } else {
             activePreviews.remove(key);
             clearTrackingForBuilder(key);
@@ -97,6 +95,10 @@ public final class BuilderPreviewTracker {
         BlockPos key = builderOrigin.immutable();
         activeFootprintGeneration.put(key, INVALID_FOOTPRINT_GENERATION);
         clearRendererForBuilder(key);
+        // GUI enable clears after setPreviewActive — re-emit structure/border while preview stays on.
+        if (activePreviews.contains(key)) {
+            reconcileMarkersForBuilder(key);
+        }
     }
 
     public static void applyFootprintClear(BlockPos builderOrigin, int footprintGeneration) {
@@ -107,9 +109,9 @@ public final class BuilderPreviewTracker {
         activeFootprintGeneration.put(key, footprintGeneration);
         pendingLayerResetByOwner.add(key);
         clearRendererForBuilder(key);
-        Level level = Minecraft.getInstance().level;
-        if (level != null && activePreviews.contains(key)) {
-            refreshAreaBorder(level, key);
+        if (activePreviews.contains(key)) {
+            // Server footprint reset wiped markers; rebuild rods/blades/closure + border now.
+            reconcileMarkersForBuilder(key);
         }
     }
 
@@ -186,7 +188,7 @@ public final class BuilderPreviewTracker {
         if (pendingLayerResetByOwner.remove(owner)) {
             clearLayerCacheForBuilder(owner);
         }
-        // Shell edges are AreaBorder; ignore legacy frame-edge packets.
+        // Shell edges are InsetAreaBorder; ignore legacy frame-edge packets.
         if (color == COLOR_FRAME_EDGE) {
             return;
         }
@@ -194,7 +196,7 @@ public final class BuilderPreviewTracker {
         Level level = Minecraft.getInstance().level;
         if (level != null && color == COLOR_OCCUPIED) {
             BlockState state = level.getBlockState(cell);
-            if (state.isAir() || state.canBeReplaced()) {
+            if (state.isAir()) {
                 return;
             }
         }
@@ -203,7 +205,8 @@ public final class BuilderPreviewTracker {
                 .computeIfAbsent(owner, k -> new ConcurrentHashMap<>())
                 .computeIfAbsent(cell, k -> ConcurrentHashMap.newKeySet())
                 .add(color);
-        syncResolvedMarker(owner, cell, duration);
+        // Per-packet only: update this cell. Full box-merge runs on reconcile (not every S2C).
+        syncSingleCellMarker(owner, cell, duration);
     }
 
     public static List<BlockPos> pollBuildersNeedingWorldRefresh(Level level) {
@@ -289,7 +292,7 @@ public final class BuilderPreviewTracker {
 
     private static void clearRendererForBuilder(BlockPos owner) {
         MarkRenderer.getInstance().clearBillboardMarkersForOwner(owner);
-        AreaBorderRenderer.getInstance().clearArea(areaBorderKey(owner));
+        InsetAreaBorderRenderer.getInstance().clearArea(areaBorderKey(owner));
     }
 
     private static Object areaBorderKey(BlockPos owner) {
@@ -299,7 +302,7 @@ public final class BuilderPreviewTracker {
     private static void refreshAreaBorder(Level level, BlockPos owner) {
         AABB volume = resolveFootprintVolume(level, owner);
         if (volume == null) {
-            AreaBorderRenderer.getInstance().clearArea(areaBorderKey(owner));
+            InsetAreaBorderRenderer.getInstance().clearArea(areaBorderKey(owner));
             return;
         }
         int minX = (int) Math.floor(volume.minX);
@@ -308,11 +311,11 @@ public final class BuilderPreviewTracker {
         int maxX = (int) Math.floor(volume.maxX - 1e-6);
         int maxY = (int) Math.floor(volume.maxY - 1e-6);
         int maxZ = (int) Math.floor(volume.maxZ - 1e-6);
-        AreaBorderRenderer.getInstance().showArea(
+        InsetAreaBorderRenderer.getInstance().showArea(
                 areaBorderKey(owner),
                 new BlockPos(minX, minY, minZ),
                 new BlockPos(maxX, maxY, maxZ),
-                AreaBorderRenderer.DEFAULT_MACHINE_COLOR,
+                InsetAreaBorderRenderer.DEFAULT_MACHINE_COLOR,
                 0);
     }
 
@@ -350,41 +353,78 @@ public final class BuilderPreviewTracker {
         markerLayersByOwner.put(owner, fresh);
     }
 
-    private static void syncResolvedMarker(BlockPos owner, BlockPos worldPos, int durationTicks) {
-        // Full refresh keeps box merges coherent when a single cell arrives mid-batch.
-        refreshAllMarkersForOwner(owner, durationTicks);
-    }
-
-    private static void refreshAllMarkersForOwner(BlockPos owner, int durationTicks) {
+    /**
+     * Incremental display for one cell while S2C streams in.
+     * Only occupied / closure get billboards — rods and blades wait for structure boxes on reconcile.
+     */
+    private static void syncSingleCellMarker(BlockPos owner, BlockPos worldPos, int durationTicks) {
         Map<BlockPos, Set<Integer>> layers = markerLayersByOwner.get(owner);
-        if (layers == null || layers.isEmpty()) {
-            clearRendererForBuilder(owner);
-            Level level = Minecraft.getInstance().level;
-            if (level != null && activePreviews.contains(owner)) {
-                refreshAreaBorder(level, owner);
-            }
+        Set<Integer> colors = layers != null ? layers.get(worldPos) : null;
+        if (colors == null || colors.isEmpty()) {
             return;
         }
         Level level = Minecraft.getInstance().level;
         if (level == null) {
             return;
         }
-        MarkRenderer.getInstance().clearBillboardMarkersForOwner(owner);
-        Map<BlockPos, Integer> resolved = new HashMap<>();
-        for (Map.Entry<BlockPos, Set<Integer>> entry : layers.entrySet()) {
-            Integer color = resolveDisplayColor(level, entry.getKey(), entry.getValue());
-            if (color != null) {
-                resolved.put(entry.getKey(), color);
-            }
+        Integer resolved = resolveDisplayColor(level, worldPos, colors);
+        if (resolved != null && resolved == COLOR_OCCUPIED) {
+            // Occupied blockers use X-ray so they stay visible through the footprint.
+            MarkRenderer.getInstance().addBillboardMarker(owner, worldPos, resolved, durationTicks, true);
         }
-        emitMergedBoxes(owner, resolved, durationTicks);
+    }
+
+    private static void refreshAllMarkersForOwner(BlockPos owner, int durationTicks) {
+        Level level = Minecraft.getInstance().level;
+        if (level == null) {
+            return;
+        }
+        MarkRenderer.getInstance().clearBillboardMarkersForOwner(owner);
+        emitStructureBoxes(level, owner, durationTicks);
+
+        Map<BlockPos, Set<Integer>> layers = markerLayersByOwner.get(owner);
+        if (layers != null && !layers.isEmpty()) {
+            Map<BlockPos, Integer> overlay = new HashMap<>();
+            for (Map.Entry<BlockPos, Set<Integer>> entry : layers.entrySet()) {
+                Integer color = resolveDisplayColor(level, entry.getKey(), entry.getValue());
+                if (color != null && color == COLOR_OCCUPIED) {
+                    overlay.put(entry.getKey(), color);
+                }
+            }
+            emitMergedBoxes(owner, overlay, durationTicks);
+        }
         if (activePreviews.contains(owner)) {
             refreshAreaBorder(level, owner);
         }
     }
 
+    private static void emitStructureBoxes(Level level, BlockPos owner, int durationTicks) {
+        BlockEntity be = level.getBlockEntity(owner);
+        if (be == null) {
+            return;
+        }
+        MarkRenderer renderer = MarkRenderer.getInstance();
+        // Depth-tested (no X-ray). Blade arms: thin Y-centered slab (~block model 2.3/16).
+        final float bladeThickness = 3.0f / 16.0f;
+        BuilderPreviewMarkerLogic.BoxSink sink = (min, max, color) -> {
+            if (color == COLOR_BLADE) {
+                renderer.addOwnedBox(owner, min, max, color, durationTicks, false, bladeThickness);
+            } else {
+                renderer.addOwnedBox(owner, min, max, color, durationTicks, false);
+            }
+        };
+        if (be instanceof ReactorBuilderBlockEntity reactor) {
+            BuilderPreviewMarkerLogic.forEachReactorStructureBoxes(level, reactor, owner, sink);
+        } else if (be instanceof TurbineBuilderBlockEntity turbine) {
+            BuilderPreviewMarkerLogic.forEachTurbineStructureBoxes(level, turbine, owner, sink);
+        }
+    }
+
     /** Greedy merge of same-color cells into inclusive AABBs (fewer draw calls). */
     private static void emitMergedBoxes(BlockPos owner, Map<BlockPos, Integer> resolved, int durationTicks) {
+        if (resolved.isEmpty()) {
+            return;
+        }
         Set<BlockPos> remaining = new HashSet<>(resolved.keySet());
         MarkRenderer renderer = MarkRenderer.getInstance();
         while (!remaining.isEmpty()) {
@@ -414,8 +454,10 @@ public final class BuilderPreviewTracker {
                     }
                 }
             }
+            // Occupied merge boxes: X-ray (structure rods/blades stay depth-tested).
+            boolean throughWalls = color == COLOR_OCCUPIED;
             renderer.addOwnedBox(owner, new BlockPos(x0, y0, z0), new BlockPos(x1, y1, z1),
-                    color, durationTicks, false);
+                    color, durationTicks, throughWalls);
         }
     }
 
@@ -438,7 +480,7 @@ public final class BuilderPreviewTracker {
     private static Integer resolveDisplayColor(Level level, BlockPos worldPos, Set<Integer> layers) {
         if (layers.contains(COLOR_OCCUPIED)) {
             BlockState state = level.getBlockState(worldPos);
-            if (!state.isAir() && !state.canBeReplaced()) {
+            if (!state.isAir()) {
                 return COLOR_OCCUPIED;
             }
         }
@@ -488,7 +530,7 @@ public final class BuilderPreviewTracker {
             for (int y = minY; y <= maxY; y++) {
                 for (int z = minZ; z <= maxZ; z++) {
                     BlockState state = level.getBlockState(new BlockPos(x, y, z));
-                    if (!state.isAir() && !state.canBeReplaced()) {
+                    if (!state.isAir()) {
                         hash = 31 * hash + x;
                         hash = 31 * hash + y;
                         hash = 31 * hash + z;

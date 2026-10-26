@@ -94,7 +94,7 @@ description='''${mod_description}'''
 [[dependencies.${mod_id}]]
     modId="iska_lib"
     type="required"
-    versionRange="[1.12.0.1.0,)"
+    versionRange="[1.13.0.0.0,)"
     ordering="AFTER"
     side="BOTH"
 
