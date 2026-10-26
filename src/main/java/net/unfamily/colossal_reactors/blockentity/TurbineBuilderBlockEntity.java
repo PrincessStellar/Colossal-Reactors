@@ -37,6 +37,7 @@ import net.unfamily.colossal_reactors.turbine.ElecCoilLoader;
 import net.unfamily.colossal_reactors.menu.TurbineBuilderMenu;
 import net.unfamily.colossal_reactors.turbine.TurbineBuildLogic;
 import net.unfamily.colossal_reactors.turbine.TurbineBuildMaterialCounter;
+import net.unfamily.colossal_reactors.turbine.TurbineFlowMath;
 import net.unfamily.colossal_reactors.turbine.TurbineGenerationLoader;
 import net.unfamily.colossal_reactors.turbine.TurbinePlacementAxis;
 import net.unfamily.colossal_reactors.turbine.TurbineRodPatternLogic;
@@ -578,7 +579,7 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
         websiteCacheD = -1;
     }
 
-    /** Layers used by build/simulation (GUI setting + 1, clamped). */
+    /** Layers used by build/simulation (same as GUI setting, clamped to fit). */
     public int getAppliedCoilLayerCount() {
         return TurbineRodSpaceLayout.appliedCoilLayerCount(interiorExtentAlongPlacementAxis(), coilLayerCount);
     }
@@ -596,7 +597,38 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
     }
 
     private int maxCoilLayersForCurrentHeight() {
-        return Math.min(COIL_LAYER_MAX, TurbineRodSpaceLayout.maxCoilLayerSettingForInterior(interiorExtentAlongPlacementAxis()));
+        int physical = Math.min(COIL_LAYER_MAX,
+                TurbineRodSpaceLayout.maxCoilLayerSettingForInterior(interiorExtentAlongPlacementAxis()));
+        // Website seeds keep full physical range (site rebalance is a follow-up).
+        if (rodPattern == TurbineRodPatternLogic.PATTERN_WEBSITE) {
+            return physical;
+        }
+        int w = sizeLeft + sizeRight + 1;
+        int h = sizeHeight + 1;
+        int d = sizeDepth + 1;
+        int along = interiorExtentAlongPlacementAxis();
+        int crossA;
+        int crossB;
+        switch (getPlacementAxis().getAxis()) {
+            case Y -> {
+                crossA = TurbineRodSpaceLayout.interiorWidth(w);
+                crossB = TurbineRodSpaceLayout.interiorDepth(d);
+            }
+            case Z -> {
+                crossA = TurbineRodSpaceLayout.interiorWidth(w);
+                crossB = TurbineRodSpaceLayout.interiorHeight(h);
+            }
+            case X -> {
+                crossA = TurbineRodSpaceLayout.interiorHeight(h);
+                crossB = TurbineRodSpaceLayout.interiorDepth(d);
+            }
+            default -> {
+                crossA = 0;
+                crossB = 0;
+            }
+        }
+        int useful = TurbineFlowMath.targetCoilLayers(along, crossA, crossB);
+        return Math.max(COIL_LAYER_MIN, Math.min(physical, useful));
     }
 
     /** Lowers stored coil layers when the turbine is too short for the current setting. */
@@ -716,6 +748,7 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
         if (TurbineRodPatternLogic.usesBladeVariantToggle(rodPattern)) {
             bladeVariant = TurbineRodPatternLogic.VARIANT_EFFICIENT;
         }
+        clampCoilLayerCountToFit();
         setChanged();
     }
 
@@ -743,6 +776,7 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
         if (building) {
             resetBuildProgress();
         }
+        clampCoilLayerCountToFit();
         setChanged();
     }
 

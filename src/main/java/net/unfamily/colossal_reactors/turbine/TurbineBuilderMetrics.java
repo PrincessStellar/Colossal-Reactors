@@ -287,6 +287,13 @@ public final class TurbineBuilderMetrics {
                 rodPattern, coilIndex, rodCoilIndex, websiteRodOverride);
 
         double bladeEff = TurbineBladeEfficiency.computeMultiplier(blades.layerMaxBladesPerRod());
+        double flowEff = TurbineFlowMath.effectiveFlowEfficiency(
+                coils.rodColumnFlowEfficiency(),
+                appliedCoils,
+                interiorAlong,
+                layout.crossSizeA(),
+                layout.crossSizeB(),
+                blades.validBladeItems());
 
         return new IdealBuildMetrics(
                 blades.bladeItems(),
@@ -294,7 +301,7 @@ public final class TurbineBuilderMetrics {
                 coils.solidCellCount(),
                 coils.averageCoilEfficiency(),
                 bladeEff,
-                coils.rodColumnFlowEfficiency(),
+                flowEff,
                 layout);
     }
 
