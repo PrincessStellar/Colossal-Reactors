@@ -111,9 +111,26 @@ public final class TurbineProductionMath {
             boolean websiteClimbProfile,
             int websiteBladeRingCap,
             int bladeVariant) {
+        return fromBuilderParams(sizeLeft, sizeRight, sizeHeight, sizeDepth,
+                placementAxisIndex, rodPattern, coilIndex, coilIndex, storedCoilSetting, generation,
+                websiteRodOverride, websiteClimbProfile, websiteBladeRingCap, bladeVariant);
+    }
+
+    public static ProductionEstimate fromBuilderParams(
+            int sizeLeft, int sizeRight, int sizeHeight, int sizeDepth,
+            int placementAxisIndex,
+            int rodPattern,
+            int coilIndex,
+            int rodCoilIndex,
+            int storedCoilSetting,
+            @Nullable TurbineGenerationDefinition generation,
+            @Nullable java.util.function.BiPredicate<Integer, Integer> websiteRodOverride,
+            boolean websiteClimbProfile,
+            int websiteBladeRingCap,
+            int bladeVariant) {
         TurbineBuilderMetrics.IdealBuildMetrics ideal = TurbineBuilderMetrics.idealBuildMetrics(
                 sizeLeft, sizeRight, sizeHeight, sizeDepth,
-                placementAxisIndex, storedCoilSetting, rodPattern, coilIndex,
+                placementAxisIndex, storedCoilSetting, rodPattern, coilIndex, rodCoilIndex,
                 websiteRodOverride, websiteClimbProfile, websiteBladeRingCap, bladeVariant);
         TurbineGenerationDefinition gen = generation != null ? generation : TurbineGenerationLoader.getDefault();
         return compute(

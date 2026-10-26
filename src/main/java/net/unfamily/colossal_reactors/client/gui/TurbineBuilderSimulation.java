@@ -71,9 +71,24 @@ public final class TurbineBuilderSimulation {
             boolean websiteClimbProfile,
             int websiteBladeRingCap,
             int bladeVariant) {
+        return run(registryAccess, sizeLeft, sizeRight, sizeHeight, sizeDepth,
+                placementAxisIndex, rodPattern, coilIndex, coilIndex, storedCoilSetting, generationId,
+                websiteRodOverride, websiteClimbProfile, websiteBladeRingCap, bladeVariant);
+    }
+
+    public static TurbineSimulation.SimulationResult run(
+            RegistryAccess registryAccess,
+            int sizeLeft, int sizeRight, int sizeHeight, int sizeDepth,
+            int placementAxisIndex,
+            int rodPattern, int coilIndex, int rodCoilIndex, int storedCoilSetting,
+            @Nullable ResourceLocation generationId,
+            @Nullable BiPredicate<Integer, Integer> websiteRodOverride,
+            boolean websiteClimbProfile,
+            int websiteBladeRingCap,
+            int bladeVariant) {
         return TurbineSimulation.simulateFromBuilderParams(
                 registryAccess, sizeLeft, sizeRight, sizeHeight, sizeDepth,
-                placementAxisIndex, rodPattern, coilIndex, storedCoilSetting, generationId,
+                placementAxisIndex, rodPattern, coilIndex, rodCoilIndex, storedCoilSetting, generationId,
                 websiteRodOverride, websiteClimbProfile, websiteBladeRingCap, bladeVariant);
     }
 }

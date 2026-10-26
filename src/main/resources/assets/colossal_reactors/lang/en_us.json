@@ -391,6 +391,8 @@
   "gui.colossal_reactors.turbine_builder.tooltip.open_top.closed": "Complete turbine with top casing closed.",
   "gui.colossal_reactors.turbine_builder.tooltip.open_top.open": "Top face left open for access; rod controller is still placed.",
   "gui.colossal_reactors.turbine_builder.tooltip.coil_value": "Electromagnetic coil: %s",
+  "gui.colossal_reactors.turbine_builder.tooltip.rod_coil_value": "Rod-column coil: %s",
+  "gui.colossal_reactors.turbine_builder.tooltip.rod_coil": "Coil blocks placed above rod columns in the coil zone",
   "gui.colossal_reactors.turbine_builder.tooltip.coil_left": "Left click: next",
   "gui.colossal_reactors.turbine_builder.tooltip.coil_right": "Right click: previous",
   "gui.colossal_reactors.turbine_builder.tooltip.coil_layers": "Coil zone height: %s interior layers",

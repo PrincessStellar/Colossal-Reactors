@@ -380,6 +380,8 @@
   "gui.colossal_reactors.turbine_builder.tooltip.open_top.closed": "Turbina completa con chiusura superiore.",
   "gui.colossal_reactors.turbine_builder.tooltip.open_top.open": "Facciata superiore aperta; il controller barra turbina viene comunque piazzato.",
   "gui.colossal_reactors.turbine_builder.tooltip.coil_value": "Bobina elettromagnetica: %s",
+  "gui.colossal_reactors.turbine_builder.tooltip.rod_coil_value": "Bobina colonne asta: %s",
+  "gui.colossal_reactors.turbine_builder.tooltip.rod_coil": "Bobine sopra le colonne di asta nella zona bobine",
   "gui.colossal_reactors.turbine_builder.tooltip.coil_left": "Click sinistro: successivo",
   "gui.colossal_reactors.turbine_builder.tooltip.coil_right": "Click destro: precedente",
   "gui.colossal_reactors.turbine_builder.tooltip.coil_layers": "Altezza zona bobine: %s layer interni",

@@ -62,7 +62,7 @@ public class TurbineBuilderMenu extends AbstractContainerMenu {
             this.blockEntity = null;
             this.levelAccess = ContainerLevelAccess.NULL;
             this.fluidData = new SimpleContainerData(3);
-            this.sizeData = new SimpleContainerData(18);
+            this.sizeData = new SimpleContainerData(19);
         }
         addDataSlots(fluidData);
         addDataSlots(sizeData);
@@ -144,6 +144,7 @@ public class TurbineBuilderMenu extends AbstractContainerMenu {
     }
 
     public int getSelectedCoilIndex() { return sizeData.get(7); }
+    public int getSelectedRodCoilIndex() { return sizeData.get(18); }
     public int getHeatSinkIndex() { return getSelectedCoilIndex(); }
     public int getCoilLayerCount() { return sizeData.get(8); }
     public int getRodPattern() { return sizeData.get(9); }
