@@ -184,10 +184,15 @@ public class ReactorBuilderScreen extends AbstractContainerScreen<ReactorBuilder
     private static final int SIM_LINE_HEIGHT = 12;
     private static final int SIM_TEXT_COLOR = 0xFFFFFF;
 
-    /** Coolant/Fuel cycle buttons: same horizontal inset each side (12px), reduced gap, width split equally. */
+    /**
+     * Simulation inherits {@link ReactorControllerGui} geometry (230×240), not builder 250.
+     * Coolant/Fuel buttons / title / close X must use controller width.
+     */
+    private static final int SIM_GUI_WIDTH = ReactorControllerGui.WIDTH;
+    private static final int SIM_CLOSE_BUTTON_X = ReactorControllerGui.closeButtonX(SIM_GUI_WIDTH);
     private static final int SIM_BUTTONS_HORIZONTAL_INSET = 12;
     private static final int SIM_BUTTONS_GAP = 2;
-    private static final int COOLANT_BUTTON_W = (GUI_WIDTH - SIM_BUTTONS_HORIZONTAL_INSET * 2 - SIM_BUTTONS_GAP) / 2;
+    private static final int COOLANT_BUTTON_W = (SIM_GUI_WIDTH - SIM_BUTTONS_HORIZONTAL_INSET * 2 - SIM_BUTTONS_GAP) / 2;
     private static final int FUEL_BUTTON_W = COOLANT_BUTTON_W;
     private static final int COOLANT_BUTTON_H = 20;
     private static final int COOLANT_BUTTON_RIGHT_INSET = SIM_BUTTONS_HORIZONTAL_INSET;
@@ -651,7 +656,12 @@ public class ReactorBuilderScreen extends AbstractContainerScreen<ReactorBuilder
         boolean showBuilder = viewMode == ViewMode.BUILDER;
         boolean showLink = viewMode == ViewMode.WEBSITE_LINK;
         boolean website = showBuilder && isWebsitePattern();
-        if (closeButton != null) closeButton.visible = true;
+        if (closeButton != null) {
+            closeButton.visible = true;
+            int closeX = viewMode == ViewMode.SIMULATION ? SIM_CLOSE_BUTTON_X : CLOSE_BUTTON_X;
+            closeButton.setX(leftPos + closeX);
+            closeButton.setY(topPos + CLOSE_BUTTON_Y);
+        }
         if (buttonUp != null) buttonUp.visible = showBuilder;
         if (buttonOffsetLeft != null) buttonOffsetLeft.visible = showBuilder;
         if (buttonOffsetRight != null) buttonOffsetRight.visible = showBuilder;
@@ -1199,7 +1209,7 @@ public class ReactorBuilderScreen extends AbstractContainerScreen<ReactorBuilder
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         if (viewMode == ViewMode.SIMULATION) {
             Component simTitle = Component.translatable("gui.colossal_reactors.reactor_builder.simulation");
-            int titleX = leftPos + (imageWidth - font.width(simTitle)) / 2;
+            int titleX = leftPos + (SIM_GUI_WIDTH - font.width(simTitle)) / 2;
             int titleY = topPos + 6;
             guiGraphics.drawString(font, simTitle, titleX, titleY, 0x404040, false);
             return;

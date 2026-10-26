@@ -12,16 +12,19 @@ public final class TurbineFlowMath {
 
     /**
      * Useful coil-layer target for the given interior height and cross-section.
+     * Height uses exterior along ({@code interiorAlong + 2} frame) so defaults match
+     * config examples (16→2, 32→3, 64→6). Footprint still uses interior cross area.
      * Stacking coil layers above this does not increase the depth bonus.
      */
     public static int targetCoilLayers(int interiorAlong, int crossA, int crossB) {
         int div = Math.max(1, Config.TURBINE_FLOW_LAYER_HEIGHT_DIV.get());
         int targetMax = Math.max(1, Config.TURBINE_FLOW_LAYER_TARGET_MAX.get());
         int footprintRef = Math.max(1, Config.TURBINE_FLOW_LAYER_FOOTPRINT_REF.get());
-        int along = Math.max(0, interiorAlong);
+        // Exterior along the rotor: interior + top/bottom (or end) casing.
+        int exteriorAlong = Math.max(0, interiorAlong) + 2;
         int area = Math.max(0, crossA) * Math.max(0, crossB);
 
-        int rawTarget = (int) Math.round(along / (double) div);
+        int rawTarget = (int) Math.round(exteriorAlong / (double) div);
         double footFactor = Math.min(1.0, area / (double) footprintRef);
         int scaled = (int) Math.round(rawTarget * footFactor);
         return Math.max(1, Math.min(targetMax, scaled));
