@@ -28,7 +28,7 @@ public class ElecCoilRecipeCategory implements IRecipeCategory<ElecCoilJeiRecipe
     public static final IRecipeType<ElecCoilJeiRecipe> RECIPE_TYPE = IRecipeType.create(UID, ElecCoilJeiRecipe.class);
 
     private static final int WIDTH = 180;
-    private static final int HEIGHT = 54;
+    private static final int HEIGHT = 78;
 
     private final IDrawable background;
     private final IDrawable icon;
@@ -80,8 +80,13 @@ public class ElecCoilRecipeCategory implements IRecipeCategory<ElecCoilJeiRecipe
         int color = 0xFF404040;
         g.text(font, Component.translatable("jei.colossal_reactors.elec_coil.eff_coe", formatMultiplier(def.effCoe())),
                 margin, textY, color, false);
+        int lh = JeiRecipeBackgroundDrawable.TEXT_LINE_HEIGHT;
         g.text(font, Component.translatable("jei.colossal_reactors.elec_coil.eff_max", formatMultiplier(def.effMax())),
-                margin, textY + JeiRecipeBackgroundDrawable.TEXT_LINE_HEIGHT, color, false);
+                margin, textY + lh, color, false);
+        g.text(font, Component.translatable("jei.colossal_reactors.elec_coil.flow_coe", formatMultiplier(def.flowCoe())),
+                margin, textY + lh * 2, color, false);
+        g.text(font, Component.translatable("jei.colossal_reactors.elec_coil.flow_max", formatMultiplier(def.flowMax())),
+                margin, textY + lh * 3, color, false);
     }
 
     private static String formatMultiplier(double value) {

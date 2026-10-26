@@ -33,6 +33,8 @@ public final class ElecCoilLoader {
     private static final String KEY_VALID_BLOCKS = "valid_blocks";
     private static final String KEY_EFF_COE = "eff_coe";
     private static final String KEY_EFF_MAX = "eff_max";
+    private static final String KEY_FLOW_COE = "flow_coe";
+    private static final String KEY_FLOW_MAX = "flow_max";
 
     private static final List<ElecCoilDefinition> DEFINITIONS = new ArrayList<>();
     /** Parsed datapack entries; sanitized when registries/tags are ready (see {@link #rebuildDefinitions()}). */
@@ -58,7 +60,8 @@ public final class ElecCoilLoader {
     private static void rebuildDefinitionsInner() {
         DEFINITIONS.clear();
         double empty = Config.TURBINE_EMPTY_COIL_EFFICIENCY.get();
-        DEFINITIONS.add(new ElecCoilDefinition(List.of("minecraft:air"), empty, empty));
+        // Air: RF efficiency from config; flow stays neutral 1.0 (controller-column average).
+        DEFINITIONS.add(new ElecCoilDefinition(List.of("minecraft:air"), empty, empty, 1.0, 1.0));
         int rawCount = rawDatapackCoils.size();
         for (ElecCoilDefinition def : rawDatapackCoils) {
             ElecCoilDefinition sanitized = DatapackSelectorValidator.sanitizeElecCoil(def);
@@ -108,7 +111,9 @@ public final class ElecCoilLoader {
         }
         double effCoe = json.has(KEY_EFF_COE) ? json.get(KEY_EFF_COE).getAsDouble() : 1.0;
         double effMax = json.has(KEY_EFF_MAX) ? json.get(KEY_EFF_MAX).getAsDouble() : effCoe;
-        return new ElecCoilDefinition(validBlocks, effCoe, effMax);
+        double flowCoe = json.has(KEY_FLOW_COE) ? json.get(KEY_FLOW_COE).getAsDouble() : 1.0;
+        double flowMax = json.has(KEY_FLOW_MAX) ? json.get(KEY_FLOW_MAX).getAsDouble() : flowCoe;
+        return new ElecCoilDefinition(validBlocks, effCoe, effMax, flowCoe, flowMax);
     }
 
     @Nullable
@@ -116,13 +121,13 @@ public final class ElecCoilLoader {
         for (ElecCoilDefinition def : DEFINITIONS) {
             for (String selector : def.validBlocks()) {
                 if (blockMatches(state, selector, registryAccess)) {
-                    return new ElecCoilModifiers(def.effCoe(), def.effMax());
+                    return new ElecCoilModifiers(def.effCoe(), def.effMax(), def.flowCoe(), def.flowMax());
                 }
             }
         }
         if (state.isAir()) {
             double empty = Config.TURBINE_EMPTY_COIL_EFFICIENCY.get();
-            return new ElecCoilModifiers(empty, empty);
+            return new ElecCoilModifiers(empty, empty, 1.0, 1.0);
         }
         return null;
     }
@@ -131,7 +136,7 @@ public final class ElecCoilLoader {
         ElecCoilModifiers m = getModifiersForBlock(state, registryAccess);
         if (m != null) return m;
         double empty = Config.TURBINE_EMPTY_COIL_EFFICIENCY.get();
-        return new ElecCoilModifiers(empty, empty);
+        return new ElecCoilModifiers(empty, empty, 1.0, 1.0);
     }
 
     public static boolean isCoilBlock(BlockState state, RegistryAccess registryAccess) {
@@ -243,5 +248,9 @@ public final class ElecCoilLoader {
         return blockId.equals(id);
     }
 
-    public record ElecCoilModifiers(double effCoe, double effMax) {}
+    public record ElecCoilModifiers(double effCoe, double effMax, double flowCoe, double flowMax) {
+        public ElecCoilModifiers(double effCoe, double effMax) {
+            this(effCoe, effMax, 1.0, 1.0);
+        }
+    }
 }

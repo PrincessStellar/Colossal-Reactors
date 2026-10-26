@@ -28,11 +28,11 @@ public class ReactorBuilderMenu extends AbstractContainerMenu {
     public static final int BUFFER_SLOTS = BUFFER_ROWS * BUFFER_COLS;
 
     /** Buffer slot positions (top-left of 9x3 grid). */
-    private static final int BUFFER_X = 35;
+    private static final int BUFFER_X = 45;
     private static final int BUFFER_Y = 102;
 
     /** Player inventory (3x9) and hotbar (1x9). */
-    private static final int PLAYER_X = 35;
+    private static final int PLAYER_X = 45;
     private static final int PLAYER_Y = 168;
     private static final int HOTBAR_Y = 226;
 

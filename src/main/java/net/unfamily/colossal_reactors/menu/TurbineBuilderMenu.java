@@ -27,10 +27,10 @@ public class TurbineBuilderMenu extends AbstractContainerMenu {
     private static final int BUFFER_COLS = 9;
     public static final int BUFFER_SLOTS = BUFFER_ROWS * BUFFER_COLS;
 
-    private static final int BUFFER_X = 35;
+    private static final int BUFFER_X = 45;
     private static final int BUFFER_Y = 102;
 
-    private static final int PLAYER_X = 35;
+    private static final int PLAYER_X = 45;
     private static final int PLAYER_Y = 168;
     private static final int HOTBAR_Y = 226;
 

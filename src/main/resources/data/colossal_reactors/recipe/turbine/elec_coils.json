@@ -4,7 +4,9 @@
     {
       "valid_blocks": ["minecraft:air"],
       "eff_coe": 0.3,
-      "eff_max": 0.3
+      "eff_max": 0.3,
+      "flow_coe": 1.0,
+      "flow_max": 1.0
     },
     {
       "valid_blocks": ["#c:storage_blocks/graphite"],
@@ -14,7 +16,16 @@
     {
       "valid_blocks": ["#c:storage_blocks/iron"],
       "eff_coe": 0.66,
-      "eff_max": 0.75
+      "eff_max": 0.75,
+      "flow_coe": 1.25,
+      "flow_max": 1.35
+    },
+    {
+      "valid_blocks": ["#c:storage_blocks/lapis"],
+      "eff_coe": 0.70,
+      "eff_max": 0.85,
+      "flow_coe": 1.10,
+      "flow_max": 1.20
     },
     {
       "valid_blocks": ["#c:storage_blocks/tin"],
@@ -37,9 +48,23 @@
       "eff_max": 1.0
     },
     {
+      "valid_blocks": ["#c:storage_blocks/redstone"],
+      "eff_coe": 0.85,
+      "eff_max": 0.90,
+      "flow_coe": 1.50,
+      "flow_max": 1.65
+    },
+    {
       "valid_blocks": ["#c:storage_blocks/bronze"],
       "eff_coe": 0.85,
       "eff_max": 1.0
+    },
+    {
+      "valid_blocks": ["#c:storage_blocks/steel"],
+      "eff_coe": 0.90,
+      "eff_max": 1.0,
+      "flow_coe": 1.50,
+      "flow_max": 1.65
     },
     {
       "valid_blocks": ["#c:storage_blocks/constantan"],
@@ -62,9 +87,23 @@
       "eff_max": 1.3
     },
     {
+      "valid_blocks": ["#c:storage_blocks/stainless_steel"],
+      "eff_coe": 1.0,
+      "eff_max": 1.2,
+      "flow_coe": 2.0,
+      "flow_max": 2.2
+    },
+    {
       "valid_blocks": ["#c:storage_blocks/netherite"],
       "eff_coe": 1.3,
       "eff_max": 1.5
+    },
+    {
+      "valid_blocks": ["minecraft:crying_obsidian"],
+      "eff_coe": 1.2,
+      "eff_max": 1.5,
+      "flow_coe": 2.8,
+      "flow_max": 3.0
     }
   ]
 }

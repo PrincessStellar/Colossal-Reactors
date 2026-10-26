@@ -436,7 +436,7 @@ public final class TurbineBuildLogic {
         }
         var columns = TurbineRodPatternLogic.rodColumns(
                 layout.crossSizeA(), layout.crossSizeB(), builder.getRodPattern(), websiteRodOverride(builder));
-        int ringCap = websiteBladeRingCap(builder);
+        int ringCap = designBladeRingCap(builder, layout);
         for (int t = t0; t < layout.rodExtent(); t++) {
             int caStart = (t == t0) ? ca0 : 0;
             for (int ca = caStart; ca < layout.crossSizeA(); ca++) {
@@ -472,11 +472,13 @@ public final class TurbineBuildLogic {
         return true;
     }
 
-    private static int websiteBladeRingCap(TurbineBuilderBlockEntity builder) {
+    private static int designBladeRingCap(TurbineBuilderBlockEntity builder, TurbineRotorLayout layout) {
+        int websiteCap = Integer.MAX_VALUE;
         if (builder.getRodPattern() == TurbineRodPatternLogic.PATTERN_WEBSITE && builder.hasValidWebsiteDesign()) {
-            return builder.getWebsiteBladeRingCap();
+            websiteCap = builder.getWebsiteBladeRingCap();
         }
-        return Integer.MAX_VALUE;
+        return TurbineRodPatternLogic.designBladeRingCap(
+                builder.getRodPattern(), layout.crossSizeA(), layout.crossSizeB(), websiteCap);
     }
 
     /** Flat index of coil-zone cells (minX→maxX, minY→maxY, minZ→maxZ). Stored in {@code buildRodLx}. */

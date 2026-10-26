@@ -16,7 +16,7 @@ public final class TurbineRodPatternLogic {
     public static final int PATTERN_WEBSITE = 0;
     /** Single center shaft; growth from {@link #VARIANT_EFFICIENT} / {@link #VARIANT_PRODUCTIVE}. */
     public static final int PATTERN_FLOW = 1;
-    /** Staggered multi-rod grid; growth from variant. */
+    /** Multi-rod grid from {@link TurbineRodGridLayout#bestLayout}; growth from variant + best ring. */
     public static final int PATTERN_HYPERFLOW = 2;
     /** Frame + partition wall + coils only (no rods / blades / rod controller). */
     public static final int PATTERN_CUSTOM = 3;
@@ -82,30 +82,24 @@ public final class TurbineRodPatternLogic {
                 TurbineRodControllerLayout.Center center = TurbineRodControllerLayout.bestPrimaryCenter(rw, rd);
                 yield rx == center.rx() && rz == center.rz();
             }
-            case PATTERN_HYPERFLOW -> isHyperflowColumn(rx, rz, rw, rd);
+            case PATTERN_HYPERFLOW -> TurbineRodGridLayout.isBestLayoutRod(rx, rz, rw, rd);
             case PATTERN_CUSTOM, PATTERN_NONE -> false;
             default -> false;
         };
     }
 
     /**
-     * Classic HyperFlow: ModDecoded staggered multi-rod grid (phase {@code a=1}), same family as
-     * {@code mdct1.9.9.9.f.3.gold.1.a.-.ABEAARABAA} on a 7×7 interior.
+     * Ring cap for HyperFlow (ModDecoded Rod grid {@code best.ring}). Website uses the seed ring;
+     * other patterns leave uncapped ({@link Integer#MAX_VALUE}).
      */
-    private static boolean isHyperflowColumn(int rx, int rz, int rw, int rd) {
-        if (rw < 3 || rd < 3) {
-            TurbineRodControllerLayout.Center center = TurbineRodControllerLayout.bestPrimaryCenter(rw, rd);
-            return rx == center.rx() && rz == center.rz();
+    public static int designBladeRingCap(int rodPattern, int rw, int rd, int websiteRingCap) {
+        if (rodPattern == PATTERN_WEBSITE) {
+            return websiteRingCap < 0 ? Integer.MAX_VALUE : websiteRingCap;
         }
-        if (rz < 1 || rz >= rd || (rz & 1) == 0) {
-            return false;
+        if (rodPattern == PATTERN_HYPERFLOW) {
+            return TurbineRodGridLayout.bestRing(rw, rd);
         }
-        int row = (rz - 1) / 2;
-        int x0 = (1 + (row % 2) * 2) % 4;
-        if (rx < x0 || rx >= rw) {
-            return false;
-        }
-        return ((rx - x0) % 4) == 0;
+        return Integer.MAX_VALUE;
     }
 
     /** All rod-column centers for a built-in pattern. */

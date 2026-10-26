@@ -441,7 +441,7 @@ public final class DatapackSelectorValidator {
             LOGGER.debug("Skipped elec coil entry: no resolvable valid_blocks");
             return null;
         }
-        return new ElecCoilDefinition(blocks, def.effCoe(), def.effMax());
+        return new ElecCoilDefinition(blocks, def.effCoe(), def.effMax(), def.flowCoe(), def.flowMax());
     }
 
     public static boolean isMelterRecipeResolvable(MelterRecipe recipe) {

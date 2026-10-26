@@ -133,11 +133,11 @@ public final class RodPatternLogic {
     }
 
     private static boolean isRodExpansionColumnWithLayers(int rx, int rz, int rw, int rd, int layers, boolean rodAtCenter) {
-        // L=0: outer perimeter (2D)
-        if (rx == 0 || rx == rw - 1 || rz == 0 || rz == rd - 1) return true;
-        // L>=1: boundary of inner rectangle [L, rw-1-L] x [L, rd-1-L]
-        for (int L = 1; L < layers; L++) {
-            if (rx == L || rx == rw - 1 - L || rz == L || rz == rd - 1 - L) return true;
+        // Concentric 1-block-wide frames with a 1-cell heat-sink gap between rings
+        // (tooltip example): rods where Chebyshev-to-border distance is even and < 2*layers.
+        int dist = Math.min(Math.min(rx, rw - 1 - rx), Math.min(rz, rd - 1 - rz));
+        if ((dist & 1) == 0 && (dist / 2) < layers) {
+            return true;
         }
         if (!rodAtCenter) return false;
         int cx = rw / 2, cz = rd / 2;
