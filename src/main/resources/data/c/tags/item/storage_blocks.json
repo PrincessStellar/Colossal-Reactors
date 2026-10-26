@@ -13,6 +13,9 @@
     "#c:storage_blocks/chromium",
     "#c:storage_blocks/raw_chromium",
     "#c:storage_blocks/stainless_steel",
-    "#c:storage_blocks/copper_all"
+    "#c:storage_blocks/copper_all",
+    "#c:storage_blocks/lapis",
+    "#c:storage_blocks/redstone",
+    "#c:storage_blocks/steel"
   ]
 }

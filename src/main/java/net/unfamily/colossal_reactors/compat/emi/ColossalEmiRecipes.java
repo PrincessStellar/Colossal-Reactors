@@ -191,7 +191,7 @@ public final class ColossalEmiRecipes {
                 "elec_coil",
                 ViewerRecipeIds.fallbackId("elec_coil/" + Integer.toHexString(recipe.hashCode())),
                 null);
-        return new SimpleEmiRecipe(EmiCategories.ELEC_COIL, id, 180, 54, false) {
+        return new SimpleEmiRecipe(EmiCategories.ELEC_COIL, id, 180, 78, false) {
             @Override
             protected void resolveStacks() {
                 var reg = EmiStackHelper.registryOrThrow();
@@ -204,8 +204,11 @@ public final class ColossalEmiRecipes {
                 int textY = RecipeViewerLayout.TEXT_Y;
                 int margin = RecipeViewerLayout.TEXT_MARGIN;
                 int color = 0xFF404040;
+                int lh = RecipeViewerLayout.TEXT_LINE_HEIGHT;
                 g.drawString(font, Component.translatable("jei.colossal_reactors.elec_coil.eff_coe", fmt(recipe.effCoe())), margin, textY, color, false);
-                g.drawString(font, Component.translatable("jei.colossal_reactors.elec_coil.eff_max", fmt(recipe.effMax())), margin, textY + RecipeViewerLayout.TEXT_LINE_HEIGHT, color, false);
+                g.drawString(font, Component.translatable("jei.colossal_reactors.elec_coil.eff_max", fmt(recipe.effMax())), margin, textY + lh, color, false);
+                g.drawString(font, Component.translatable("jei.colossal_reactors.elec_coil.flow_coe", fmt(recipe.flowCoe())), margin, textY + lh * 2, color, false);
+                g.drawString(font, Component.translatable("jei.colossal_reactors.elec_coil.flow_max", fmt(recipe.flowMax())), margin, textY + lh * 3, color, false);
             }
         };
     }
@@ -626,8 +629,11 @@ public final class ColossalEmiRecipes {
         int textY = RecipeViewerLayout.TEXT_Y;
         int margin = RecipeViewerLayout.TEXT_MARGIN;
         int color = 0xFF404040;
+        int lh = RecipeViewerLayout.TEXT_LINE_HEIGHT;
         g.drawString(font, net.minecraft.network.chat.Component.translatable("jei.colossal_reactors.elec_coil.eff_coe", fmt(recipe.effCoe())), margin, textY, color, false);
-        g.drawString(font, net.minecraft.network.chat.Component.translatable("jei.colossal_reactors.elec_coil.eff_max", fmt(recipe.effMax())), margin, textY + RecipeViewerLayout.TEXT_LINE_HEIGHT, color, false);
+        g.drawString(font, net.minecraft.network.chat.Component.translatable("jei.colossal_reactors.elec_coil.eff_max", fmt(recipe.effMax())), margin, textY + lh, color, false);
+        g.drawString(font, net.minecraft.network.chat.Component.translatable("jei.colossal_reactors.elec_coil.flow_coe", fmt(recipe.flowCoe())), margin, textY + lh * 2, color, false);
+        g.drawString(font, net.minecraft.network.chat.Component.translatable("jei.colossal_reactors.elec_coil.flow_max", fmt(recipe.flowMax())), margin, textY + lh * 3, color, false);
     }
 
     public static void drawTurbine(GuiGraphics g, TurbineJeiRecipe recipe) {

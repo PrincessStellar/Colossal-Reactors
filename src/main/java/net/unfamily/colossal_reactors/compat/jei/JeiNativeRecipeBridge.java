@@ -206,7 +206,7 @@ public final class JeiNativeRecipeBridge {
                     ElecCoilDefinition sanitized = DatapackSelectorValidator.sanitizeElecCoil(def);
                     if (ElecCoilLoader.isAirOnlyDefinition(sanitized)) {
                         double empty = Config.TURBINE_EMPTY_COIL_EFFICIENCY.get();
-                        sanitized = new ElecCoilDefinition(sanitized.validBlocks(), empty, empty);
+                        sanitized = new ElecCoilDefinition(sanitized.validBlocks(), empty, empty, 1.0, 1.0);
                     }
                     out.add(ElecCoilJeiRecipe.of(sanitized, childId(holder.id(), i, entries.size())));
                 }

@@ -58,7 +58,7 @@ import java.util.List;
 import java.util.function.BiPredicate;
 
 /**
- * Turbine Builder GUI. Background turbine_builder.png 230x250; simulation uses turbine_controller.png 230x240.
+ * Turbine Builder GUI. Background turbine_builder.png 250x250; simulation uses turbine_controller.png 230x240.
  * Like Deep Drawer Extractor: Simulation is a view mode (isSimulationView) on the same screen, not a separate Screen.
  */
 public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilderMenu>
@@ -66,7 +66,8 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
 
     private static final ResourceLocation BACKGROUND = ResourceLocation.fromNamespaceAndPath(
             ColossalReactors.MODID, "textures/gui/turbine_builder.png");
-    private static final int GUI_WIDTH = ReactorControllerGui.WIDTH;
+    private static final int BUILDER_GUI_WIDTH = 250;
+    private static final int GUI_WIDTH = BUILDER_GUI_WIDTH;
     private static final int BUILDER_GUI_HEIGHT = 250;
     private static final String WEBSITE_URL =
             "https://moddecoded.com/tools/colossal-reactors/turbine-calculator/";
@@ -107,7 +108,7 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
     private static final int ROW1_Y = 28;
     private static final int ROW2_Y = 42;
     private static final int GAP = 3;
-    private static final int INVENTORY_LEFT_X = 35;
+    private static final int INVENTORY_LEFT_X = 45;
     private static final int ARROW_GROUP_WIDTH = 3 * BUTTON_W + 2 * GAP;  // 48
     /**
      * Arrow block left edge = inventory left edge (35).
@@ -140,7 +141,7 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
      * Placement moves to the ←/−/→ row (those size arrows are unused for seeds).
      */
     private static final int RIGHT_EDGE_INSET = 12;
-    private static final int RIGHT_BUTTON_W = 42;
+    private static final int RIGHT_BUTTON_W = 44;
     private static final int RIGHT_BLOCK_X = GUI_WIDTH - RIGHT_EDGE_INSET - (3 * RIGHT_BUTTON_W + 2 * GAP);
     private static final int RIGHT_BUTTON_H = BUTTON_H;
     private static final int RIGHT_COL0_X = RIGHT_BLOCK_X;
@@ -250,7 +251,7 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
     public TurbineBuilderScreen(TurbineBuilderMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         imageWidth = GUI_WIDTH;
-        // Builder texture 230x250; simulation still blits the 240-tall controller background at the top.
+        // Builder texture 250x250; simulation still blits the 240-tall controller background at the top.
         imageHeight = BUILDER_GUI_HEIGHT;
     }
 
@@ -996,7 +997,8 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
                     BuilderWebsiteLinkGui.WIDTH, BuilderWebsiteLinkGui.HEIGHT,
                     BuilderWebsiteLinkGui.WIDTH, BuilderWebsiteLinkGui.HEIGHT);
         } else if (viewMode == ViewMode.SIMULATION) {
-            guiGraphics.blit(ReactorControllerGui.BACKGROUND, leftPos, topPos, 0, 0, GUI_WIDTH, REACTOR_GUI_HEIGHT, GUI_WIDTH, REACTOR_GUI_HEIGHT);
+            int ctrlW = ReactorControllerGui.WIDTH;
+            guiGraphics.blit(ReactorControllerGui.BACKGROUND, leftPos, topPos, 0, 0, ctrlW, REACTOR_GUI_HEIGHT, ctrlW, REACTOR_GUI_HEIGHT);
             guiGraphics.enableScissor(leftPos + SIM_PANEL_X, topPos + SIM_PANEL_Y, leftPos + GuiPanelScrollbar.TEXT_RIGHT, topPos + GuiPanelScrollbar.TEXT_BOTTOM);
             int contentHeight = renderSimulationPanel(guiGraphics);
             guiGraphics.disableScissor();

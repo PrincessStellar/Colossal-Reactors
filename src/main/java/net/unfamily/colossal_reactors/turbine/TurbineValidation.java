@@ -265,10 +265,22 @@ public final class TurbineValidation {
             }
         }
 
+        java.util.HashSet<Long> flowColumns = new java.util.HashSet<>();
+        for (BlockPos ctrlPos : rodControllers) {
+            int ca = layout.crossAFromWorld(ctrlPos.getX(), ctrlPos.getY(), ctrlPos.getZ());
+            int cb = layout.crossBFromWorld(ctrlPos.getX(), ctrlPos.getY(), ctrlPos.getZ());
+            if (ca >= 0 && cb >= 0) {
+                flowColumns.add((((long) ca) << 32) | (cb & 0xffffffffL));
+            }
+        }
+
         int bladeCount = 0;
         int coilBlockCount = 0;
         double sumCoe = 0;
         double sumMax = 0;
+        int flowCellCount = 0;
+        double sumFlowCoe = 0;
+        double sumFlowMax = 0;
         List<BlockPos> redstonePorts = new ArrayList<>();
         for (int x = minX; x <= maxX; x++) {
             for (int y = minY; y <= maxY; y++) {
@@ -310,6 +322,15 @@ public final class TurbineValidation {
                                 sumCoe += m.effCoe();
                                 sumMax += m.effMax();
                             }
+                            int ca = layout.crossAFromWorld(x, y, z);
+                            int cb = layout.crossBFromWorld(x, y, z);
+                            long colKey = (((long) ca) << 32) | (cb & 0xffffffffL);
+                            if (flowColumns.contains(colKey)) {
+                                flowCellCount++;
+                                var fm = ElecCoilLoader.getModifiersForBlockOrDefault(state, registry);
+                                sumFlowCoe += fm.flowCoe();
+                                sumFlowMax += fm.flowMax();
+                            }
                         } else if (!state.isAir()) {
                             return fail(FailureCode.INTERIOR_UNKNOWN, p, report.build());
                         }
@@ -345,6 +366,9 @@ public final class TurbineValidation {
         double coilEff = coilBlockCount > 0
                 ? Math.min(sumCoe / coilBlockCount, sumMax / coilBlockCount)
                 : Config.TURBINE_EMPTY_COIL_EFFICIENCY.get();
+        double flowEff = flowCellCount > 0
+                ? Math.min(sumFlowCoe / flowCellCount, sumFlowMax / flowCellCount)
+                : 1.0;
         double bladeEff = TurbineBladeEfficiency.computeFromRotorLayout(
                 level, layout, minX, minY, minZ, maxX, maxY, maxZ);
 
@@ -354,7 +378,7 @@ public final class TurbineValidation {
         }
 
         TurbineProductionMath.ProductionEstimate production = TurbineProductionMath.compute(
-                bladeCount, validBladeCount, coilBlockCount, coilEff, bladeEff,
+                bladeCount, validBladeCount, coilBlockCount, coilEff, bladeEff, flowEff,
                 TurbineGenerationLoader.getDefault());
 
         ValidationReport finalReport = report.build();

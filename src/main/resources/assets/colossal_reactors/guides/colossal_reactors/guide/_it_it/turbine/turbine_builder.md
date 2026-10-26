@@ -24,7 +24,7 @@ Il **Turbine Builder** costruisce la turbina per te dagli item nel suo inventari
 4. Scegli un **layout** (vedi [Rod e blade](turbine_rod_and_blades.md)):
    - **Website** — incolla un **seed / URL** di design nel campo dedicato; rod (e scelta coil su Website) seguono quel layout.
    - **Flow** — un albero centrale. Sotto la riga pattern, alterna **Efficiente** (anelli in climb, **+3%** bonus altezza possibile) o **Produttivo** (anelli pieni a ogni strato).
-   - **HyperFlow** — griglia multi-rod sfalsata; posiziona un **rod controller su ogni colonna** (niente penalità −5% per controller mancante). Stesso toggle Efficiente / Produttivo di Flow.
+   - **HyperFlow** — miglior griglia multi-rod per il footprint (odd-odd o sfalsata, stessa scelta del Rod grid ModDecoded); posiziona un **rod controller su ogni colonna**. Stesso toggle Efficiente / Produttivo di Flow (anelli limitati al best ring del layout).
    - **Custom / None** — telaio (e coil per Custom) senza contenuto rotore; il tasto lungo sotto la riga pattern resta vuoto e disabilitato.
 5. Scegli **tipo coil** (cicla i metalli supportati; modificabile anche su Website) e **numero strati coil** (tasto largo sotto Preview, accanto a esso).
 6. Usa **Preview** (sotto Center, stessa larghezza) e il pannello **Simulation** per RF/t, vapore e materiali. Gli avvisi compaiono **accanto a Center**.

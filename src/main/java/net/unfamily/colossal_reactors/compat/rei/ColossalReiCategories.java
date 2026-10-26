@@ -45,7 +45,7 @@ public final class ColossalReiCategories {
             category(HEAT_SINK, "jei.colossal_reactors.reactor_heat_sink", ModBlocks.REACTOR_GLASS.get().asItem().getDefaultInstance(), 180, 54, false),
             category(MELTER, "jei.colossal_reactors.melter", ModBlocks.MELTER.get().asItem().getDefaultInstance(), 180, 78, true),
             category(MELTER_HEAT, "jei.colossal_reactors.melter_heat_source", ModBlocks.MELTER.get().asItem().getDefaultInstance(), 180, 52, false),
-            category(ELEC_COIL, "jei.colossal_reactors.elec_coil", ModBlocks.TURBINE_CASING.get().asItem().getDefaultInstance(), 180, 54, false),
+            category(ELEC_COIL, "jei.colossal_reactors.elec_coil", ModBlocks.TURBINE_CASING.get().asItem().getDefaultInstance(), 180, 78, false),
             category(TURBINE, "jei.colossal_reactors.turbine_generation", ModBlocks.TURBINE_CONTROLLER.get().asItem().getDefaultInstance(), 180, 54, true),
     };
 

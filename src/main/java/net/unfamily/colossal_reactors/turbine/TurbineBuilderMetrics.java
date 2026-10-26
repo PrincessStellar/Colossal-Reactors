@@ -124,6 +124,7 @@ public final class TurbineBuilderMetrics {
             int coilBlockCount,
             double coilEfficiency,
             double bladeEfficiency,
+            double flowEfficiency,
             TurbineRotorLayout layout
     ) {}
 
@@ -196,9 +197,16 @@ public final class TurbineBuilderMetrics {
         }
 
         double coilEff;
+        double flowEff = 1.0;
         if (coilBlocks > 0 && coilIndex >= 0 && coilIndex < ElecCoilLoader.getAllDefinitions().size()) {
             ElecCoilDefinition coilDef = ElecCoilLoader.getAllDefinitions().get(coilIndex);
             coilEff = Math.min(coilDef.effCoe(), coilDef.effMax());
+            // Homogeneous fill: flow only from columns that have rods (same as runtime RC columns).
+            int rodCols = TurbineRodPatternLogic.rodColumns(
+                    layout.crossSizeA(), layout.crossSizeB(), rodPattern, websiteRodOverride).size();
+            if (rodCols > 0) {
+                flowEff = Math.min(coilDef.flowCoe(), coilDef.flowMax());
+            }
         } else {
             coilEff = Config.TURBINE_EMPTY_COIL_EFFICIENCY.get();
         }
@@ -211,6 +219,7 @@ public final class TurbineBuilderMetrics {
                 coilBlocks,
                 coilEff,
                 bladeEff,
+                flowEff,
                 layout);
     }
 
@@ -261,7 +270,8 @@ public final class TurbineBuilderMetrics {
                 ? TurbineRodPatternLogic.rodColumns(rw, rd, rodPattern, websiteRodOverride)
                 : List.of();
         int rodsOnLayer = columns.size();
-        int ringCap = websiteBladeRingCap < 0 ? Integer.MAX_VALUE : websiteBladeRingCap;
+        int ringCap = TurbineRodPatternLogic.designBladeRingCap(
+                rodPattern, rw, rd, websiteBladeRingCap < 0 ? Integer.MAX_VALUE : websiteBladeRingCap);
         for (int t = 0; t < layout.rodExtent(); t++) {
             int maxBladesThisLayer = 0;
             int layerBlades = 0;

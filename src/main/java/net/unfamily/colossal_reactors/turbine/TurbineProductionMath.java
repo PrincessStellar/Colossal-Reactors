@@ -27,8 +27,20 @@ public final class TurbineProductionMath {
             double coilEfficiency,
             double bladeEfficiency,
             @Nullable TurbineGenerationDefinition generation) {
+        return compute(bladeCount, validBladeCount, coilBlockCount, coilEfficiency, bladeEfficiency, 1.0, generation);
+    }
+
+    public static ProductionEstimate compute(
+            int bladeCount,
+            int validBladeCount,
+            int coilBlockCount,
+            double coilEfficiency,
+            double bladeEfficiency,
+            double flowEfficiency,
+            @Nullable TurbineGenerationDefinition generation) {
         double steam = validBladeCount * Config.TURBINE_STEAM_MB_PER_BLADE_PER_TICK.get()
-                * Config.TURBINE_CONSUMPTION_MULTIPLIER.get();
+                * Config.TURBINE_CONSUMPTION_MULTIPLIER.get()
+                * Math.max(0.0, flowEfficiency);
         double rfPerMb = generation != null
                 ? TurbineGenerationLoader.rfPerSteamMb(generation.rfProduction())
                 : Config.TURBINE_DEFAULT_RF_PER_STEAM_MB.get();
@@ -110,6 +122,7 @@ public final class TurbineProductionMath {
                 ideal.coilBlockCount(),
                 ideal.coilEfficiency(),
                 ideal.bladeEfficiency(),
+                ideal.flowEfficiency(),
                 gen);
     }
 }

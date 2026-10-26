@@ -24,7 +24,7 @@ The **Turbine Builder** builds the turbine for you from items in its inventory�
 4. Pick a **layout** (see [Rods and blades](turbine_rod_and_blades.md)):
    - **Website** — paste a design **seed / URL** into the design field; rods (and coil choice on Website) follow that layout.
    - **Flow** — one center shaft. Below the pattern row, toggle **Efficient** (climb rings, **+3%** height bonus possible) or **Productive** (full rings every layer).
-   - **HyperFlow** — multi-rod staggered grid; places a **rod controller on each column** (no −5% missing-controller penalty). Same Efficient / Productive toggle as Flow.
+   - **HyperFlow** — best multi-rod grid for the footprint (odd-odd or staggered, same pick as ModDecoded Rod grid); places a **rod controller on each column**. Same Efficient / Productive toggle as Flow (ring capped to that layout’s best ring).
    - **Custom / None** — frame (and coils for Custom) without rotor contents; the long button under the pattern row stays empty and disabled.
 5. Choose **coil type** (cycles supported metals; editable on Website too) and **coil layer count** (wide button under Preview, next to it).
 6. Use **Preview** (under Center, same width) and the **Simulation** panel for RF/t, steam, and materials. Warnings appear **beside Center**.

@@ -63,7 +63,7 @@ The [Turbine Builder](turbine_builder.md) can place rods, blades, and rod contro
 
 - **Website** — rods from an imported design seed; blade growth follows the seed climb/full profile.
 - **Flow** — single centered rod column. A second control toggles **Efficient** (blade rings **climb** layer by layer) or **Productive** (full rings every layer).
-- **HyperFlow** — multi-rod staggered grid (with a one-cell margin from walls); the builder places a **rod controller on every column**. Same Efficient / Productive toggle as Flow.
+- **HyperFlow** — best multi-rod grid for the footprint (ModDecoded Rod grid algorithm); the builder places a **rod controller on every column**. Same Efficient / Productive toggle as Flow.
 - **Custom / None** — shell (and coils for Custom) without rotor contents.
 
 Hand-placing blades with the item follows the same ring order as the builder.

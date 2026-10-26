@@ -398,10 +398,15 @@ public final class ColossalReiDisplays {
         int textY = oy + RecipeViewerLayout.TEXT_Y;
         int margin = ox + RecipeViewerLayout.TEXT_MARGIN;
         int color = 0xFF404040;
+        int lh = RecipeViewerLayout.TEXT_LINE_HEIGHT;
         g.drawString(font, Component.translatable("jei.colossal_reactors.elec_coil.eff_coe", formatMultiplier(recipe.effCoe())),
                 margin, textY, color, false);
         g.drawString(font, Component.translatable("jei.colossal_reactors.elec_coil.eff_max", formatMultiplier(recipe.effMax())),
-                margin, textY + RecipeViewerLayout.TEXT_LINE_HEIGHT, color, false);
+                margin, textY + lh, color, false);
+        g.drawString(font, Component.translatable("jei.colossal_reactors.elec_coil.flow_coe", formatMultiplier(recipe.flowCoe())),
+                margin, textY + lh * 2, color, false);
+        g.drawString(font, Component.translatable("jei.colossal_reactors.elec_coil.flow_max", formatMultiplier(recipe.flowMax())),
+                margin, textY + lh * 3, color, false);
     }
 
     private static void drawTurbine(GuiGraphics g, int ox, int oy, TurbineJeiRecipe recipe) {

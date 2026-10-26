@@ -63,7 +63,7 @@ Il [Turbine Builder](turbine_builder.md) può posizionare rod, blade e rod contr
 
 - **Website** — rod da un seed di design importato; la crescita blade segue il profilo climb/pieno del seed.
 - **Flow** — una colonna rod centrale. Un secondo controllo alterna **Efficiente** (anelli blade **salgono** strato per strato) o **Produttivo** (anelli pieni a ogni strato).
-- **HyperFlow** — griglia multi-rod sfalsata (con margine di una cella dalle pareti); il builder mette un **rod controller su ogni colonna**. Stesso toggle Efficiente / Produttivo di Flow.
+- **HyperFlow** — miglior griglia multi-rod per il footprint (algoritmo Rod grid ModDecoded); il builder mette un **rod controller su ogni colonna**. Stesso toggle Efficiente / Produttivo di Flow.
 - **Custom / None** — guscio (e coil per Custom) senza contenuto rotore.
 
 Posizionare le blade a mano con l’item segue lo stesso ordine di anelli del builder.

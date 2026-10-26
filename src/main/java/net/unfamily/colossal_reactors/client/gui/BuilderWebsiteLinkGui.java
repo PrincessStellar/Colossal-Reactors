@@ -16,7 +16,7 @@ public final class BuilderWebsiteLinkGui {
 
     public static final ResourceLocation BACKGROUND = ResourceLocation.fromNamespaceAndPath(
             ColossalReactors.MODID, "textures/gui/builder_link.png");
-    public static final int WIDTH = 230;
+    public static final int WIDTH = 250;
     public static final int HEIGHT = 250;
 
     /** Matches other builder / controller text insets. */
