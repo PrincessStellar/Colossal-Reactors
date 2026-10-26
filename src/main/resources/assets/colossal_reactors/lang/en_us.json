@@ -369,7 +369,7 @@
   "gui.colossal_reactors.turbine_builder.mark_input.tooltip.line3": "Ctrl/Alt+click: clear filters for slots that are empty or no longer match.",
   "gui.colossal_reactors.turbine_builder.coil_layers": "Coil layers: %s",
   "gui.colossal_reactors.turbine_builder.coil_layers_short": "Layers: %s",
-  "gui.colossal_reactors.turbine_builder.tooltip.coil_layers_capped": "Capped to %s layers for current height (setting %s).",
+  "gui.colossal_reactors.turbine_builder.tooltip.coil_layers_capped": "Limited to %s layers for this size (requested %s).",
   "gui.colossal_reactors.turbine_builder.tooltip.coil_layers_applied": "Build uses %s internal coil layers",
   "gui.colossal_reactors.turbine_builder.pattern.0": "Website",
   "gui.colossal_reactors.turbine_builder.pattern.1": "Flow",

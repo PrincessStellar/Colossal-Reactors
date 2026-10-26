@@ -857,11 +857,11 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
             coilLayersButton.setMessage(getCoilLayersButtonLabel());
             MutableComponent layersTip = Component.translatable(
                     "gui.colossal_reactors.turbine_builder.tooltip.coil_layers", effectiveCoilLayerCount());
-            if (effectiveCoilLayerCount() < menu.getCoilLayerCount() + 1) {
+            if (effectiveCoilLayerCount() < menu.getCoilLayerCount()) {
                 layersTip.append(Component.literal("\n"))
                         .append(Component.translatable(
                                 "gui.colossal_reactors.turbine_builder.tooltip.coil_layers_capped",
-                                effectiveCoilLayerCount(), menu.getCoilLayerCount() + 1));
+                                effectiveCoilLayerCount(), menu.getCoilLayerCount()));
             }
             layersTip.append(Component.literal("\n"))
                     .append(Component.translatable("gui.colossal_reactors.turbine_builder.tooltip.coil_left"))

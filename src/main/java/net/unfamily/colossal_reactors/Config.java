@@ -395,6 +395,21 @@ public class Config {
     public static final ModConfigSpec.BooleanValue TURBINE_LEGACY_IGNORE_AIR_IN_COIL_AVERAGE = BUILDER
             .comment("Recreate old bug: skip air cells when averaging coil-zone efficiency (solid coils only). Default: false (air counted)")
             .define("001_legacyIgnoreAirInCoilAverage", false);
+    public static final ModConfigSpec.DoubleValue TURBINE_FLOW_LAYER_BONUS_MAX = BUILDER
+            .comment("Max steam-flow bonus from useful coil depth (asymptote). L=1 gives 0. Default: 0.20")
+            .defineInRange("002_flowLayerBonusMax", 0.20, 0.0, 1.0);
+    public static final ModConfigSpec.IntValue TURBINE_FLOW_LAYER_HEIGHT_DIV = BUILDER
+            .comment("Target useful coil layers ≈ round(interiorAlong / this). Default: 10 (16→2, 32→3, 64→6)")
+            .defineInRange("003_flowLayerHeightDiv", 10, 1, 64);
+    public static final ModConfigSpec.IntValue TURBINE_FLOW_LAYER_TARGET_MAX = BUILDER
+            .comment("Hard cap on useful coil-layer target for flow depth bonus. Default: 8")
+            .defineInRange("004_flowLayerTargetMax", 8, 1, 32);
+    public static final ModConfigSpec.IntValue TURBINE_FLOW_LAYER_FOOTPRINT_REF = BUILDER
+            .comment("Interior cross-section area (blocks) for full height-based target (7x7=49). Smaller footprints scale target down. Default: 49")
+            .defineInRange("005_flowLayerFootprintRef", 49, 1, 4096);
+    public static final ModConfigSpec.IntValue TURBINE_FLOW_LAYER_BLADE_GATE = BUILDER
+            .comment("Valid blade count for full flow-depth bonus gate. Below this, bonus scales linearly. Default: 64")
+            .defineInRange("006_flowLayerBladeGate", 64, 1, Integer.MAX_VALUE);
 
     static {
         BUILDER.pop();

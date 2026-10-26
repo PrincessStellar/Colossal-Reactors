@@ -358,7 +358,7 @@
   "gui.colossal_reactors.turbine_builder.mark_input.tooltip.line3": "Ctrl/Alt+click: cancella i filtri degli slot vuoti o non più validi.",
   "gui.colossal_reactors.turbine_builder.coil_layers": "Layer bobine: %s",
   "gui.colossal_reactors.turbine_builder.coil_layers_short": "Strati: %s",
-  "gui.colossal_reactors.turbine_builder.tooltip.coil_layers_capped": "Ridotto a %s layer per l'altezza attuale (impostazione %s).",
+  "gui.colossal_reactors.turbine_builder.tooltip.coil_layers_capped": "Limitato a %s layer per questa dimensione (richiesti %s).",
   "gui.colossal_reactors.turbine_builder.tooltip.coil_layers_applied": "La build usa %s layer bobina interni",
   "gui.colossal_reactors.turbine_builder.pattern.0": "Sito web",
   "gui.colossal_reactors.turbine_builder.pattern.1": "Flow",

@@ -366,7 +366,7 @@ public final class TurbineValidation {
         double coilEff = coilBlockCount > 0
                 ? Math.min(sumCoe / coilBlockCount, sumMax / coilBlockCount)
                 : Config.TURBINE_EMPTY_COIL_EFFICIENCY.get();
-        double flowEff = flowCellCount > 0
+        double materialFlow = flowCellCount > 0
                 ? Math.min(sumFlowCoe / flowCellCount, sumFlowMax / flowCellCount)
                 : 1.0;
         double bladeEff = TurbineBladeEfficiency.computeFromRotorLayout(
@@ -376,6 +376,14 @@ public final class TurbineValidation {
         if (Boolean.TRUE.equals(Config.TURBINE_REQUIRE_BALANCED_BLADE_RINGS.get())) {
             validBladeCount = countValidBalancedBlades(level, layout, minX, minY, minZ, maxX, maxY, maxZ);
         }
+
+        double flowEff = TurbineFlowMath.effectiveFlowEfficiency(
+                materialFlow,
+                coilLayersUsed,
+                layout.interiorExtentAlong(),
+                layout.crossSizeA(),
+                layout.crossSizeB(),
+                validBladeCount);
 
         TurbineProductionMath.ProductionEstimate production = TurbineProductionMath.compute(
                 bladeCount, validBladeCount, coilBlockCount, coilEff, bladeEff, flowEff,
