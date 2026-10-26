@@ -629,6 +629,11 @@ public final class TurbineBuildLogic {
                     if (ElecCoilLoader.shouldSkipSolidCoilAutoPlacement(coilIndex)) {
                         continue;
                     }
+                    // Empty/unresolved tag selectors: cannot place — do not spin forever at STAGE_COILS
+                    // (common when zone coil ≠ rod coil and one option has no loaded blocks).
+                    if (ElecCoilLoader.placementStateForOption(coilIndex, level.registryAccess()) == null) {
+                        continue;
+                    }
                     BlockPos pos = new BlockPos(xx, yy, zz);
                     BlockState existing = level.getBlockState(pos);
                     if (ElecCoilLoader.isBlockMatchingSelectedCoil(existing, coilIndex, level.registryAccess())) {

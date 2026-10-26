@@ -742,6 +742,7 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
 
     /** Cycle builder mode: Website / Flow / HyperFlow / Custom / None. */
     public void cycleRodPattern(boolean next) {
+        int previous = rodPattern;
         if (next) rodPattern = (rodPattern + 1) % ROD_PATTERN_COUNT;
         else rodPattern = rodPattern <= 0 ? ROD_PATTERN_COUNT - 1 : rodPattern - 1;
         // Default Efficient whenever entering Flow / HyperFlow.
@@ -749,6 +750,15 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
             bladeVariant = TurbineRodPatternLogic.VARIANT_EFFICIENT;
         }
         clampCoilLayerCountToFit();
+        // Returning to Website: re-apply stored seed. In other modes the seed is kept but ignored.
+        if (rodPattern == TurbineRodPatternLogic.PATTERN_WEBSITE
+                && previous != TurbineRodPatternLogic.PATTERN_WEBSITE) {
+            String code = getWebsiteDesign();
+            if (code != null && !code.isEmpty()) {
+                net.unfamily.colossal_reactors.builder.web.BuilderWebsiteDesigns.applyToTurbineBuilder(this, code);
+                return;
+            }
+        }
         setChanged();
     }
 
@@ -989,9 +999,9 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
         tag.putInt(TAG_BUILD_HEAT_LZ, buildHeatLz);
         tag.putInt(TAG_BUILD_PROGRESS, buildProgressPercent);
         tag.putBoolean(TAG_BUILD_PROGRESS_VISIBLE, buildProgressVisible);
-        if (websiteDesignCode != null && !websiteDesignCode.isEmpty()) {
-            tag.putString(TAG_WEBSITE_DESIGN, websiteDesignCode);
-        }
+        // Always write so client sync cannot treat a missing key as "clear design"
+        // (that wiped the seed when cycling zone/rod coils to mdct2).
+        tag.putString(TAG_WEBSITE_DESIGN, websiteDesignCode != null ? websiteDesignCode : "");
         CompoundTag markTag = new CompoundTag();
         for (int i = 0; i < markInputFilters.size(); i++) {
             final int slot = i;
@@ -1079,10 +1089,8 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
         if (tag.contains(TAG_WEBSITE_DESIGN)) {
             websiteDesignCode = tag.getString(TAG_WEBSITE_DESIGN);
             invalidateWebsiteRodCache();
-        } else {
-            websiteDesignCode = "";
-            invalidateWebsiteRodCache();
         }
+        // Missing key: keep existing code (partial/legacy packets must not wipe a valid seed).
         if (tag.contains(TAG_BUILD_STAGE)) buildStage = tag.getInt(TAG_BUILD_STAGE);
         if (tag.contains(TAG_BUILD_FRAME_X)) buildFrameX = tag.getInt(TAG_BUILD_FRAME_X);
         if (tag.contains(TAG_BUILD_FRAME_Y)) buildFrameY = tag.getInt(TAG_BUILD_FRAME_Y);

@@ -238,6 +238,8 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
     private Button buttonPreview;
     private Button buttonOpenLink;
     private EditBox designEditBox;
+    /** Suppress C2S while {@link #syncDesignEditBoxFromBlockEntity()} rewrites the seed after coil cycles. */
+    private boolean suppressDesignEditCallback;
     /** Flow / HyperFlow: Efficient↔Productive; other modes: empty disabled placeholder. */
     private Button buttonBladeVariant;
     private Button linkOpenButton;
@@ -531,12 +533,28 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
     }
 
     private void onDesignEdited(String value) {
-        if (menu.getBlockEntity() == null) return;
+        if (suppressDesignEditCallback || menu.getBlockEntity() == null) return;
+        // Seed is only meaningful on Website mode; stale EditBox callbacks must not snap pattern back.
+        if (!isWebsitePattern()) {
+            return;
+        }
         PacketDistributor.sendToServer(new TurbineBuilderWebsiteDesignPayload(menu.getBlockPos(), value == null ? "" : value));
         if (value != null && !value.isBlank() && BuilderWebsiteDesigns.parseTurbine(value).isEmpty()) {
             websiteStatusMessage = Component.translatable("gui.colossal_reactors.builder.invalid_website_design");
         } else {
             websiteStatusMessage = Component.empty();
+        }
+    }
+
+    /** Release Screen focus from the Website seed field so coil/pattern clicks are not swallowed. */
+    private void clearDesignEditFocus() {
+        if (designEditBox == null) {
+            return;
+        }
+        if (getFocused() == designEditBox) {
+            setFocused(null);
+        } else {
+            designEditBox.setFocused(false);
         }
     }
 
@@ -674,7 +692,7 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
         };
     }
 
-    /** Keep the seed EditBox in sync when the server rewrites mdct1 (coil / layers cycle). */
+    /** Keep the seed EditBox in sync when the server rewrites mdct1/mdct2 (coil / layers cycle). */
     private void syncDesignEditBoxFromBlockEntity() {
         if (designEditBox == null || !designEditBox.visible || menu.getBlockEntity() == null) {
             return;
@@ -684,9 +702,12 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
             code = "";
         }
         if (!code.equals(designEditBox.getValue())) {
-            designEditBox.setResponder(s -> {});
-            designEditBox.setValue(code);
-            designEditBox.setResponder(this::onDesignEdited);
+            suppressDesignEditCallback = true;
+            try {
+                designEditBox.setValue(code);
+            } finally {
+                suppressDesignEditCallback = false;
+            }
         }
     }
 
@@ -725,6 +746,7 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
 
     private void onRodCoilClick(boolean next) {
         if (menu.getBlockEntity() == null) return;
+        clearDesignEditFocus();
         PacketDistributor.sendToServer(new TurbineBuilderCoilPayload(menu.getBlockPos(), next, true));
     }
 
@@ -753,6 +775,7 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
 
     private void onCoilLayersClick(boolean next) {
         if (menu.getBlockEntity() == null) return;
+        clearDesignEditFocus();
         PacketDistributor.sendToServer(new TurbineBuilderOptionPayload(menu.getBlockPos(), 2, next));
     }
 
@@ -792,10 +815,12 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
                 websiteStatusMessage = Component.translatable("gui.colossal_reactors.builder.set_website_design");
                 return;
             }
+            clearDesignEditFocus();
             switchToSimulationView();
             return;
         }
         if (menu.getBlockEntity() == null) return;
+        clearDesignEditFocus();
         BlockPos pos = menu.getBlockPos();
         if (index == 0) PacketDistributor.sendToServer(new TurbineBuilderOptionPayload(pos, 1, true));  // Pattern
         if (index == 1) cyclePlacementAxis(true);
@@ -1009,6 +1034,7 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
                 return true;
             }
             if (isInRightBlockButton(x, y, 0)) {
+                clearDesignEditFocus();
                 if (menu.getBlockEntity() != null)
                     PacketDistributor.sendToServer(new TurbineBuilderOptionPayload(menu.getBlockPos(), 1, false));  // Pattern
                 playUiClick();
@@ -1016,22 +1042,26 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
             }
             if (buttonWebsitePlacement != null && buttonWebsitePlacement.visible
                     && isInWidget(x, y, buttonWebsitePlacement)) {
+                clearDesignEditFocus();
                 cyclePlacementAxis(false);
                 playUiClick();
                 return true;
             }
             if (isInRightBlockButton(x, y, 1)) {
+                clearDesignEditFocus();
                 cyclePlacementAxis(false);
                 playUiClick();
                 return true;
             }
             if (isInRightBlockButton(x, y, 2)) {
+                clearDesignEditFocus();
                 if (menu.getBlockEntity() != null)
                     PacketDistributor.sendToServer(new TurbineBuilderCoilPayload(menu.getBlockPos(), false, false));  // Coil
                 playUiClick();
                 return true;
             }
             if (isInRightBlockButton(x, y, 3)) {
+                clearDesignEditFocus();
                 if (menu.getBlockEntity() != null)
                     PacketDistributor.sendToServer(new TurbineBuilderOptionPayload(menu.getBlockPos(), 0, true));  // OpenTop toggle
                 playUiClick();

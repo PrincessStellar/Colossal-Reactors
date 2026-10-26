@@ -155,6 +155,25 @@ public final class WebsiteSelectorMaps {
         return "air";
     }
 
+    /**
+     * Stable mdct coil token derived from a datapack selector when no config map entry exists.
+     * Keeps distinct builder options distinct in mdct2 (avoids collapsing everything to graphite).
+     */
+    @Nullable
+    public static String websiteTokenFromSelector(String selector) {
+        if (selector == null || selector.isEmpty()) {
+            return null;
+        }
+        String token = pathTail(selector).toLowerCase(Locale.ROOT).replace('-', '_');
+        if ("air".equals(token)) {
+            return "air";
+        }
+        if (token.isEmpty() || !token.matches("[a-z][a-z0-9_]*")) {
+            return null;
+        }
+        return token;
+    }
+
     private static String pathTail(String selector) {
         String s = selector;
         if (s.startsWith("#")) {

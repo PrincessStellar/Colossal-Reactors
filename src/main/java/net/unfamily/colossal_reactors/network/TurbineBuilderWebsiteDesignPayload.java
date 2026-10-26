@@ -13,9 +13,12 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.unfamily.colossal_reactors.ColossalReactors;
 import net.unfamily.colossal_reactors.blockentity.TurbineBuilderBlockEntity;
 import net.unfamily.colossal_reactors.builder.web.BuilderWebsiteDesigns;
+import net.unfamily.colossal_reactors.turbine.TurbineRodPatternLogic;
 
 /**
  * C2S: set or clear the ModDecoded turbine design code on the builder.
+ * Full apply (size / coils / {@code PATTERN_WEBSITE}) only when already on Website mode;
+ * otherwise the seed is stored and ignored until the player returns to Website.
  */
 public record TurbineBuilderWebsiteDesignPayload(BlockPos pos, String designCode) implements CustomPacketPayload {
 
@@ -44,8 +47,11 @@ public record TurbineBuilderWebsiteDesignPayload(BlockPos pos, String designCode
                 String code = packet.designCode() == null ? "" : packet.designCode().trim();
                 if (code.isEmpty()) {
                     builder.setWebsiteDesign("");
-                } else {
+                } else if (builder.getRodPattern() == TurbineRodPatternLogic.PATTERN_WEBSITE) {
                     BuilderWebsiteDesigns.applyToTurbineBuilder(builder, code);
+                } else {
+                    // Keep seed for later; do not force Website / overwrite classic mode settings.
+                    builder.setWebsiteDesign(code);
                 }
             }
         });
