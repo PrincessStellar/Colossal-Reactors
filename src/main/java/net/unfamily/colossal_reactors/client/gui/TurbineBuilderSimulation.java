@@ -42,7 +42,8 @@ public final class TurbineBuilderSimulation {
             boolean websiteClimbProfile) {
         return run(registryAccess, sizeLeft, sizeRight, sizeHeight, sizeDepth,
                 placementAxisIndex, rodPattern, coilIndex, storedCoilSetting, generationId,
-                websiteRodOverride, websiteClimbProfile, Integer.MAX_VALUE);
+                websiteRodOverride, websiteClimbProfile, Integer.MAX_VALUE,
+                net.unfamily.colossal_reactors.turbine.TurbineRodPatternLogic.VARIANT_EFFICIENT);
     }
 
     public static TurbineSimulation.SimulationResult run(
@@ -54,9 +55,25 @@ public final class TurbineBuilderSimulation {
             @Nullable BiPredicate<Integer, Integer> websiteRodOverride,
             boolean websiteClimbProfile,
             int websiteBladeRingCap) {
+        return run(registryAccess, sizeLeft, sizeRight, sizeHeight, sizeDepth,
+                placementAxisIndex, rodPattern, coilIndex, storedCoilSetting, generationId,
+                websiteRodOverride, websiteClimbProfile, websiteBladeRingCap,
+                net.unfamily.colossal_reactors.turbine.TurbineRodPatternLogic.VARIANT_EFFICIENT);
+    }
+
+    public static TurbineSimulation.SimulationResult run(
+            RegistryAccess registryAccess,
+            int sizeLeft, int sizeRight, int sizeHeight, int sizeDepth,
+            int placementAxisIndex,
+            int rodPattern, int coilIndex, int storedCoilSetting,
+            @Nullable ResourceLocation generationId,
+            @Nullable BiPredicate<Integer, Integer> websiteRodOverride,
+            boolean websiteClimbProfile,
+            int websiteBladeRingCap,
+            int bladeVariant) {
         return TurbineSimulation.simulateFromBuilderParams(
                 registryAccess, sizeLeft, sizeRight, sizeHeight, sizeDepth,
                 placementAxisIndex, rodPattern, coilIndex, storedCoilSetting, generationId,
-                websiteRodOverride, websiteClimbProfile, websiteBladeRingCap);
+                websiteRodOverride, websiteClimbProfile, websiteBladeRingCap, bladeVariant);
     }
 }

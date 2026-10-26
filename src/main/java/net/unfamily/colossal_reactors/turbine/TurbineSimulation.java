@@ -73,7 +73,8 @@ public final class TurbineSimulation {
             boolean websiteClimbProfile) {
         return simulateFromBuilderParams(registryAccess, sizeLeft, sizeRight, sizeHeight, sizeDepth,
                 placementAxisIndex, rodPattern, coilIndex, storedCoilSetting, generationId,
-                websiteRodOverride, websiteClimbProfile, Integer.MAX_VALUE);
+                websiteRodOverride, websiteClimbProfile, Integer.MAX_VALUE,
+                TurbineRodPatternLogic.VARIANT_EFFICIENT);
     }
 
     public static SimulationResult simulateFromBuilderParams(
@@ -85,12 +86,28 @@ public final class TurbineSimulation {
             @Nullable java.util.function.BiPredicate<Integer, Integer> websiteRodOverride,
             boolean websiteClimbProfile,
             int websiteBladeRingCap) {
+        return simulateFromBuilderParams(registryAccess, sizeLeft, sizeRight, sizeHeight, sizeDepth,
+                placementAxisIndex, rodPattern, coilIndex, storedCoilSetting, generationId,
+                websiteRodOverride, websiteClimbProfile, websiteBladeRingCap,
+                TurbineRodPatternLogic.VARIANT_EFFICIENT);
+    }
+
+    public static SimulationResult simulateFromBuilderParams(
+            RegistryAccess registryAccess,
+            int sizeLeft, int sizeRight, int sizeHeight, int sizeDepth,
+            int placementAxisIndex,
+            int rodPattern, int coilIndex, int storedCoilSetting,
+            @Nullable ResourceLocation generationId,
+            @Nullable java.util.function.BiPredicate<Integer, Integer> websiteRodOverride,
+            boolean websiteClimbProfile,
+            int websiteBladeRingCap,
+            int bladeVariant) {
 
         TurbineGenerationDefinition gen = generationForSimulation(registryAccess, generationId);
         TurbineProductionMath.ProductionEstimate production = TurbineProductionMath.fromBuilderParams(
                 sizeLeft, sizeRight, sizeHeight, sizeDepth,
                 placementAxisIndex, rodPattern, coilIndex, storedCoilSetting, gen,
-                websiteRodOverride, websiteClimbProfile, websiteBladeRingCap);
+                websiteRodOverride, websiteClimbProfile, websiteBladeRingCap, bladeVariant);
 
         if (Boolean.TRUE.equals(Config.TURBINE_SIMULATION_DEBUG.get())) {
             ColossalReactors.LOGGER.info(

@@ -13,7 +13,8 @@ import java.util.regex.Pattern;
  * mdct1.X.Z.Y.{f|c}.ring.coil.coilLayers.{a|o}.steam.rodsB64
  * </pre>
  * Profile {@code f}=full (same blade rings every layer), {@code c}=climb.
- * Coil fill {@code a}=all zone, {@code o}=one block. Steam is mB/t or {@code -} for uncapped.
+ * Coil fill {@code a}=all zone, {@code o}=one block (decoded only; see {@link #coilFillOne}).
+ * Steam is mB/t or {@code -} for uncapped.
  * Rods: 1 bit per interior cell {@code x*(Z-2)+z}, LSB first, base64url.
  */
 public record ModDecodedTurbineDesign(
@@ -24,6 +25,10 @@ public record ModDecodedTurbineDesign(
         int ring,
         String coilId,
         int coilLayers,
+        /**
+         * Seed fill {@code o} (one coil block). The Turbine Builder always fills the whole coil zone
+         * ({@code a}), matching ModDecoded's builder import path — this flag is not applied to build/sim.
+         */
         boolean coilFillOne,
         @Nullable Long steamMbPerTick,
         boolean[] rodMask,

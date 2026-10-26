@@ -39,7 +39,8 @@ public final class TurbineBuilderMetrics {
             int rodPattern,
             int coilIndex) {
         return fromShellSizes(sizeLeft, sizeRight, sizeHeight, sizeDepth,
-                placementAxisIndex, storedCoilSetting, rodPattern, coilIndex, null, false, Integer.MAX_VALUE);
+                placementAxisIndex, storedCoilSetting, rodPattern, coilIndex, null, false,
+                Integer.MAX_VALUE, TurbineRodPatternLogic.VARIANT_EFFICIENT);
     }
 
     public static Estimate fromShellSizes(
@@ -52,7 +53,8 @@ public final class TurbineBuilderMetrics {
             boolean websiteClimbProfile) {
         return fromShellSizes(sizeLeft, sizeRight, sizeHeight, sizeDepth,
                 placementAxisIndex, storedCoilSetting, rodPattern, coilIndex,
-                websiteRodOverride, websiteClimbProfile, Integer.MAX_VALUE);
+                websiteRodOverride, websiteClimbProfile, Integer.MAX_VALUE,
+                TurbineRodPatternLogic.VARIANT_EFFICIENT);
     }
 
     public static Estimate fromShellSizes(
@@ -64,6 +66,22 @@ public final class TurbineBuilderMetrics {
             @Nullable BiPredicate<Integer, Integer> websiteRodOverride,
             boolean websiteClimbProfile,
             int websiteBladeRingCap) {
+        return fromShellSizes(sizeLeft, sizeRight, sizeHeight, sizeDepth,
+                placementAxisIndex, storedCoilSetting, rodPattern, coilIndex,
+                websiteRodOverride, websiteClimbProfile, websiteBladeRingCap,
+                TurbineRodPatternLogic.VARIANT_EFFICIENT);
+    }
+
+    public static Estimate fromShellSizes(
+            int sizeLeft, int sizeRight, int sizeHeight, int sizeDepth,
+            int placementAxisIndex,
+            int storedCoilSetting,
+            int rodPattern,
+            int coilIndex,
+            @Nullable BiPredicate<Integer, Integer> websiteRodOverride,
+            boolean websiteClimbProfile,
+            int websiteBladeRingCap,
+            int bladeVariant) {
 
         int w = sizeLeft + sizeRight + 1;
         int h = sizeHeight + 1;
@@ -74,7 +92,7 @@ public final class TurbineBuilderMetrics {
         TurbineRotorLayout layout = TurbineRotorLayout.from(
                 0, 0, 0, w - 1, h - 1, d - 1, w, h, d, appliedCoils, placement.facing());
         RodBladeCounts blades = countRodsAndBlades(
-                layout, rodPattern, websiteRodOverride, websiteClimbProfile, websiteBladeRingCap);
+                layout, rodPattern, websiteRodOverride, websiteClimbProfile, websiteBladeRingCap, bladeVariant);
 
         int coilBlocks = 0;
         if (!TurbineRodPatternLogic.skipsCoils(rodPattern)
@@ -116,7 +134,8 @@ public final class TurbineBuilderMetrics {
             int rodPattern,
             int coilIndex) {
         return idealBuildMetrics(sizeLeft, sizeRight, sizeHeight, sizeDepth,
-                placementAxisIndex, storedCoilSetting, rodPattern, coilIndex, null, false, Integer.MAX_VALUE);
+                placementAxisIndex, storedCoilSetting, rodPattern, coilIndex, null, false,
+                Integer.MAX_VALUE, TurbineRodPatternLogic.VARIANT_EFFICIENT);
     }
 
     public static IdealBuildMetrics idealBuildMetrics(
@@ -129,7 +148,8 @@ public final class TurbineBuilderMetrics {
             boolean websiteClimbProfile) {
         return idealBuildMetrics(sizeLeft, sizeRight, sizeHeight, sizeDepth,
                 placementAxisIndex, storedCoilSetting, rodPattern, coilIndex,
-                websiteRodOverride, websiteClimbProfile, Integer.MAX_VALUE);
+                websiteRodOverride, websiteClimbProfile, Integer.MAX_VALUE,
+                TurbineRodPatternLogic.VARIANT_EFFICIENT);
     }
 
     public static IdealBuildMetrics idealBuildMetrics(
@@ -141,6 +161,22 @@ public final class TurbineBuilderMetrics {
             @Nullable BiPredicate<Integer, Integer> websiteRodOverride,
             boolean websiteClimbProfile,
             int websiteBladeRingCap) {
+        return idealBuildMetrics(sizeLeft, sizeRight, sizeHeight, sizeDepth,
+                placementAxisIndex, storedCoilSetting, rodPattern, coilIndex,
+                websiteRodOverride, websiteClimbProfile, websiteBladeRingCap,
+                TurbineRodPatternLogic.VARIANT_EFFICIENT);
+    }
+
+    public static IdealBuildMetrics idealBuildMetrics(
+            int sizeLeft, int sizeRight, int sizeHeight, int sizeDepth,
+            int placementAxisIndex,
+            int storedCoilSetting,
+            int rodPattern,
+            int coilIndex,
+            @Nullable BiPredicate<Integer, Integer> websiteRodOverride,
+            boolean websiteClimbProfile,
+            int websiteBladeRingCap,
+            int bladeVariant) {
 
         int w = sizeLeft + sizeRight + 1;
         int h = sizeHeight + 1;
@@ -151,7 +187,7 @@ public final class TurbineBuilderMetrics {
         TurbineRotorLayout layout = TurbineRotorLayout.from(
                 0, 0, 0, w - 1, h - 1, d - 1, w, h, d, appliedCoils, placement.facing());
         RodBladeCounts blades = countRodsAndBlades(
-                layout, rodPattern, websiteRodOverride, websiteClimbProfile, websiteBladeRingCap);
+                layout, rodPattern, websiteRodOverride, websiteClimbProfile, websiteBladeRingCap, bladeVariant);
 
         int coilBlocks = 0;
         if (!TurbineRodPatternLogic.skipsCoils(rodPattern)
@@ -183,14 +219,16 @@ public final class TurbineBuilderMetrics {
      * {@link TurbineBladePlacement#effectiveTargetBladeRing} × 4 blades on that rod per layer {@code t}.
      */
     public static RodBladeCounts countRodsAndBlades(TurbineRotorLayout layout, int rodPattern) {
-        return countRodsAndBlades(layout, rodPattern, null, false, Integer.MAX_VALUE);
+        return countRodsAndBlades(layout, rodPattern, null, false, Integer.MAX_VALUE,
+                TurbineRodPatternLogic.VARIANT_EFFICIENT);
     }
 
     public static RodBladeCounts countRodsAndBlades(
             TurbineRotorLayout layout, int rodPattern,
             @Nullable BiPredicate<Integer, Integer> websiteRodOverride,
             boolean websiteClimbProfile) {
-        return countRodsAndBlades(layout, rodPattern, websiteRodOverride, websiteClimbProfile, Integer.MAX_VALUE);
+        return countRodsAndBlades(layout, rodPattern, websiteRodOverride, websiteClimbProfile,
+                Integer.MAX_VALUE, TurbineRodPatternLogic.VARIANT_EFFICIENT);
     }
 
     public static RodBladeCounts countRodsAndBlades(
@@ -198,6 +236,16 @@ public final class TurbineBuilderMetrics {
             @Nullable BiPredicate<Integer, Integer> websiteRodOverride,
             boolean websiteClimbProfile,
             int websiteBladeRingCap) {
+        return countRodsAndBlades(layout, rodPattern, websiteRodOverride, websiteClimbProfile,
+                websiteBladeRingCap, TurbineRodPatternLogic.VARIANT_EFFICIENT);
+    }
+
+    public static RodBladeCounts countRodsAndBlades(
+            TurbineRotorLayout layout, int rodPattern,
+            @Nullable BiPredicate<Integer, Integer> websiteRodOverride,
+            boolean websiteClimbProfile,
+            int websiteBladeRingCap,
+            int bladeVariant) {
         int rodBlocks = 0;
         int bladeItems = 0;
         int validBladeItems = 0;
@@ -208,7 +256,7 @@ public final class TurbineBuilderMetrics {
         int rd = layout.crossSizeB();
         boolean hasRodColumn = rw > 0 && rd > 0;
 
-        int bladePattern = TurbineRodPatternLogic.bladeGrowthPattern(rodPattern, websiteClimbProfile);
+        int growth = TurbineRodPatternLogic.resolveBladeGrowth(rodPattern, bladeVariant, websiteClimbProfile);
         List<TurbineRodControllerLayout.Center> columns = hasRodColumn
                 ? TurbineRodPatternLogic.rodColumns(rw, rd, rodPattern, websiteRodOverride)
                 : List.of();
@@ -218,8 +266,9 @@ public final class TurbineBuilderMetrics {
             int maxBladesThisLayer = 0;
             int layerBlades = 0;
             for (TurbineRodControllerLayout.Center col : columns) {
+                // Shell + pattern/design ring only — same contract as TurbineBuildLogic.tickBlades.
                 int ring = TurbineBladePlacement.effectiveTargetBladeRing(
-                        layout, t, bladePattern, col.rx(), col.rz(), columns, ringCap);
+                        layout, t, growth, col.rx(), col.rz(), List.of(), ringCap);
                 int bladesPerRod = ring * 4;
                 maxBladesThisLayer = Math.max(maxBladesThisLayer, bladesPerRod);
                 layerBlades += bladesPerRod;

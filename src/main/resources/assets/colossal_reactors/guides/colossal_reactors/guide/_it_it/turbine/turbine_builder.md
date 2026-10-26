@@ -22,11 +22,10 @@ Il **Turbine Builder** costruisce la turbina per te dagli item nel suo inventari
 2. **Apri** lo schermo e imposta **larghezza, altezza e profondità** (entro il limite del pack).
 3. Rifornisci il builder con **casing**, **vetro**, **rod controller** (uno per ogni colonna rod del pattern), **rod**, **blade** e i **blocchi di storage** per i coil.
 4. Scegli un **layout** (vedi [Rod e blade](turbine_rod_and_blades.md)):
-   - **Efficient** — un albero centrale; le blade salgono anello per anello (**+3%** bonus altezza possibile).
-   - **Productive** — un albero centrale; anelli pieni a ogni strato (massimo vapore prima).
-   - **Hyperflow** — griglia multi-rod; posiziona un **rod controller su ogni colonna** (niente penalità −5% per controller mancante).
    - **Website** — incolla un **seed / URL** di design nel campo dedicato; rod (e scelta coil su Website) seguono quel layout.
-   - **Custom / None** — telaio (e coil per Custom) senza contenuto rotore.
+   - **Flow** — un albero centrale. Sotto la riga pattern, alterna **Efficiente** (anelli in climb, **+3%** bonus altezza possibile) o **Produttivo** (anelli pieni a ogni strato).
+   - **HyperFlow** — griglia multi-rod sfalsata; posiziona un **rod controller su ogni colonna** (niente penalità −5% per controller mancante). Stesso toggle Efficiente / Produttivo di Flow.
+   - **Custom / None** — telaio (e coil per Custom) senza contenuto rotore; il tasto lungo sotto la riga pattern resta vuoto e disabilitato.
 5. Scegli **tipo coil** (cicla i metalli supportati; modificabile anche su Website) e **numero strati coil** (tasto largo sotto Preview, accanto a esso).
 6. Usa **Preview** (sotto Center, stessa larghezza) e il pannello **Simulation** per RF/t, vapore e materiali. Gli avvisi compaiono **accanto a Center**.
 7. **Mark Input** (appena sopra il buffer del builder):

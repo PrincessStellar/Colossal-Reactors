@@ -226,6 +226,8 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
     private Button buttonPreview;
     private Button buttonOpenLink;
     private EditBox designEditBox;
+    /** Flow / HyperFlow: Efficient↔Productive; other modes: empty disabled placeholder. */
+    private Button buttonBladeVariant;
     private Button linkOpenButton;
     private Button linkCopyButton;
     private Button linkBackButton;
@@ -332,6 +334,11 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
             }
         }
         addRenderableWidget(designEditBox);
+
+        buttonBladeVariant = Button.builder(Component.empty(), b -> cycleBladeVariant(true))
+                .bounds(leftPos + DESIGN_EDIT_X, topPos + DESIGN_EDIT_Y, DESIGN_EDIT_W, DESIGN_EDIT_H)
+                .build();
+        addRenderableWidget(buttonBladeVariant);
 
         int linkBtnY = BuilderWebsiteLinkGui.buttonY(topPos);
         int linkBtnW = BuilderWebsiteLinkGui.buttonWidth();
@@ -572,11 +579,23 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
         if (buttonMarkInput != null) buttonMarkInput.visible = showBuilder;
         if (buttonDumpFluid != null) buttonDumpFluid.visible = showBuilder;
         if (buttonOpenLink != null) buttonOpenLink.visible = website;
+        boolean variantMode = showBuilder && TurbineRodPatternLogic.usesBladeVariantToggle(menu.getRodPattern());
         if (designEditBox != null) {
             designEditBox.visible = website;
             designEditBox.active = website;
             if (!website) {
                 designEditBox.setFocused(false);
+            }
+        }
+        if (buttonBladeVariant != null) {
+            buttonBladeVariant.visible = showBuilder && !website;
+            buttonBladeVariant.active = variantMode;
+            if (variantMode) {
+                buttonBladeVariant.setMessage(getBladeVariantLabel());
+                buttonBladeVariant.setTooltip(Tooltip.create(getBladeVariantTooltip()));
+            } else {
+                buttonBladeVariant.setMessage(Component.empty());
+                buttonBladeVariant.setTooltip(null);
             }
         }
         if (linkOpenButton != null) linkOpenButton.visible = showLink;
@@ -696,6 +715,23 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
         return menu.getRodPattern() == TurbineRodPatternLogic.PATTERN_WEBSITE;
     }
 
+    private Component getBladeVariantLabel() {
+        return Component.translatable("gui.colossal_reactors.turbine_builder.blade_variant." + menu.getBladeVariant());
+    }
+
+    private Component getBladeVariantTooltip() {
+        return Component.translatable("gui.colossal_reactors.turbine_builder.tooltip.blade_variant." + menu.getBladeVariant())
+                .append(Component.literal("\n"))
+                .append(Component.translatable(TOOLTIP_LEFT_CLICK))
+                .append(Component.literal("\n"))
+                .append(Component.translatable(TOOLTIP_RIGHT_CLICK));
+    }
+
+    private void cycleBladeVariant(boolean next) {
+        if (menu.getBlockEntity() == null) return;
+        PacketDistributor.sendToServer(new TurbineBuilderOptionPayload(menu.getBlockPos(), 4, next));
+    }
+
     private boolean hasValidWebsiteDesign() {
         return menu.getBlockEntity() != null && menu.getBlockEntity().hasValidWebsiteDesign();
     }
@@ -737,6 +773,10 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
                         .append(Component.literal("\n"))
                         .append(Component.translatable("gui.colossal_reactors.turbine_builder.tooltip.coil_right"))));
         rightBlockButtons[0].setMessage(getRightButtonLabel(0));
+        if (buttonBladeVariant != null && buttonBladeVariant.visible && buttonBladeVariant.active) {
+            buttonBladeVariant.setMessage(getBladeVariantLabel());
+            buttonBladeVariant.setTooltip(Tooltip.create(getBladeVariantTooltip()));
+        }
         // Button 1: Placement axis (classic right block; Website uses buttonWebsitePlacement)
         rightBlockButtons[1].setTooltip(Tooltip.create(getPlacementAxisTooltip()));
         rightBlockButtons[1].setMessage(getRightButtonLabel(1));
@@ -876,6 +916,11 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
                 onCoilLayersClick(false);
                 return true;
             }
+            if (buttonBladeVariant != null && buttonBladeVariant.visible && buttonBladeVariant.active
+                    && isInWidget(x, y, buttonBladeVariant)) {
+                cycleBladeVariant(false);
+                return true;
+            }
             if (isInRightBlockButton(x, y, 0)) {
                 if (menu.getBlockEntity() != null)
                     PacketDistributor.sendToServer(new TurbineBuilderOptionPayload(menu.getBlockPos(), 1, false));  // Pattern
@@ -997,6 +1042,12 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
         ReactorPanelText.drawStatusLine(guiGraphics, font, textX, y,
                 Component.translatable("gui.colossal_reactors.turbine_builder.simulation"), null);
         y += SIM_LINE_HEIGHT;
+        if (isWebsiteCoilFillOne()) {
+            guiGraphics.drawString(font,
+                    Component.translatable("gui.colossal_reactors.turbine_builder.hint.coil_fill_one"),
+                    textX, y, GuiTextColors.PANEL_YELLOW_LIGHT, false);
+            y += SIM_LINE_HEIGHT;
+        }
 
         TurbineSimulation.SimulationResult result = getSimulationResult();
 
@@ -1074,7 +1125,7 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
                 minecraft != null && minecraft.level != null ? minecraft.level.registryAccess() : net.minecraft.core.RegistryAccess.EMPTY,
                 p.sizeLeft(), p.sizeRight(), p.sizeHeight(), p.sizeDepth(),
                 p.placementAxisOrdinal(), p.rodPattern(), p.coilIndex(), p.coilLayerCount(), p.openTop(),
-                masks.rodOverride(), masks.climbProfile(), masks.bladeRingCap());
+                masks.rodOverride(), masks.climbProfile(), masks.bladeRingCap(), p.bladeVariant());
     }
 
     @Nullable
@@ -1095,7 +1146,7 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
                 p.sizeLeft(), p.sizeRight(), p.sizeHeight(), p.sizeDepth(),
                 p.placementAxisOrdinal(), p.rodPattern(), p.coilIndex(), p.coilLayerCount(),
                 getSelectedGenerationId(),
-                masks.rodOverride(), masks.climbProfile(), masks.bladeRingCap());
+                masks.rodOverride(), masks.climbProfile(), masks.bladeRingCap(), p.bladeVariant());
     }
 
     private record WebsiteSimMasks(
@@ -1118,18 +1169,19 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
             return new BuilderSimParams(
                     be.getSizeLeft(), be.getSizeRight(), be.getSizeHeight(), be.getSizeDepth(),
                     be.getPlacementAxisIndex(), be.getRodPattern(), be.getSelectedCoilIndex(),
-                    be.getCoilLayerCount(), be.isOpenTop());
+                    be.getCoilLayerCount(), be.isOpenTop(), be.getBladeVariant());
         }
         // Menu L/R getters are swapped vs block entity field names; match BE layout when BE is unavailable.
         return new BuilderSimParams(
                 menu.getSizeRight(), menu.getSizeLeft(), menu.getSizeH(), menu.getSizeD(),
                 menu.getPlacementAxisOrdinal(), menu.getRodPattern(), menu.getSelectedCoilIndex(),
-                menu.getCoilLayerCount(), menu.isOpenTop());
+                menu.getCoilLayerCount(), menu.isOpenTop(), menu.getBladeVariant());
     }
 
     private record BuilderSimParams(
             int sizeLeft, int sizeRight, int sizeHeight, int sizeDepth,
-            int placementAxisOrdinal, int rodPattern, int coilIndex, int coilLayerCount, boolean openTop) {}
+            int placementAxisOrdinal, int rodPattern, int coilIndex, int coilLayerCount, boolean openTop,
+            int bladeVariant) {}
 
     private static String formatFuelPerTickSim(int hundredths) {
         if (hundredths <= 0) return "0";
@@ -1185,7 +1237,20 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
                     : buildInvalidBlocksTextY(font.lineHeight);
             guiGraphics.drawString(font, websiteStatusMessage,
                     STATUS_MESSAGE_X, statusY, GuiTextColors.ERROR, false);
+        } else if (viewMode == ViewMode.BUILDER && isWebsiteCoilFillOne()) {
+            int statusY = menu.isInvalidBlocksDetected()
+                    ? STATUS_MESSAGE_Y + font.lineHeight + 1
+                    : buildInvalidBlocksTextY(font.lineHeight);
+            guiGraphics.drawString(font,
+                    Component.translatable("gui.colossal_reactors.turbine_builder.hint.coil_fill_one"),
+                    STATUS_MESSAGE_X, statusY, GuiTextColors.PANEL_YELLOW_LIGHT, false);
         }
+    }
+
+    private boolean isWebsiteCoilFillOne() {
+        return isWebsitePattern() && hasValidWebsiteDesign()
+                && menu.getBlockEntity() != null
+                && menu.getBlockEntity().isWebsiteCoilFillOne();
     }
 
     private void renderMarkInputGhosts(GuiGraphics guiGraphics) {

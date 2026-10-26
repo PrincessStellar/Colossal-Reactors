@@ -55,15 +55,15 @@ On some packs, only **even rings** (4, 8, 12 blades on a layer, and so on) count
 If the turbine has **any rod column** whose closure-deck cell is **not** a [Turbine Rod Controller](turbine_structure.md), blade efficiency is multiplied by **0.95 (−5%)**.
 
 - One controller on a single-shaft layout: no penalty.
-- Multi-column layouts (**Hyperflow**, Website seeds, hand builds): place a controller **on every rod column** to cancel the −5%.
+- Multi-column layouts (**HyperFlow**, Website seeds, hand builds): place a controller **on every rod column** to cancel the −5%.
 
 ## Builder layouts
 
 The [Turbine Builder](turbine_builder.md) can place rods, blades, and rod controllers for you:
 
-- **Efficient** — single centered rod column; blade rings **climb** layer by layer (best height bonus).
-- **Productive** — same single column; each layer gets the **maximum** ring count immediately.
-- **Hyperflow** — multi-rod grid (with a one-cell margin from walls); the builder places a **rod controller on every column**.
-- **Website** — rods from an imported design seed; blade growth follows climb/full like Efficient/Productive.
+- **Website** — rods from an imported design seed; blade growth follows the seed climb/full profile.
+- **Flow** — single centered rod column. A second control toggles **Efficient** (blade rings **climb** layer by layer) or **Productive** (full rings every layer).
+- **HyperFlow** — multi-rod staggered grid (with a one-cell margin from walls); the builder places a **rod controller on every column**. Same Efficient / Productive toggle as Flow.
+- **Custom / None** — shell (and coils for Custom) without rotor contents.
 
 Hand-placing blades with the item follows the same ring order as the builder.

@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
 import org.jetbrains.annotations.Nullable;
@@ -947,7 +948,7 @@ public final class ReactorSimulation {
             @Nullable ResourceLocation simulationFuelId,
             @Nullable CoolantDefinition coolantDef) {
         return simulateFromBuilderParams(registryAccess, sizeLeft, sizeRight, sizeHeight, sizeDepth,
-                rodPattern, patternMode, heatSinkIndex, simulationFuelId, coolantDef, null, null);
+                rodPattern, patternMode, heatSinkIndex, simulationFuelId, coolantDef, null, null, null);
     }
 
     /**
@@ -962,6 +963,25 @@ public final class ReactorSimulation {
             @Nullable CoolantDefinition coolantDef,
             @Nullable BiPredicate<Integer, Integer> websiteRodOverride,
             @Nullable BiPredicate<Integer, Integer> websiteHeatSinkCell) {
+        return simulateFromBuilderParams(registryAccess, sizeLeft, sizeRight, sizeHeight, sizeDepth,
+                rodPattern, patternMode, heatSinkIndex, simulationFuelId, coolantDef,
+                websiteRodOverride, websiteHeatSinkCell, null);
+    }
+
+    /**
+     * Website simulation with optional per-cell heat-sink option indices (air = 0, gold = …).
+     * When {@code websiteHeatSinkOption} is set, modifiers are accumulated per cell like runtime /
+     * moddecoded; otherwise all counted sinks use {@code heatSinkIndex}.
+     */
+    public static SimulationResult simulateFromBuilderParams(
+            RegistryAccess registryAccess,
+            int sizeLeft, int sizeRight, int sizeHeight, int sizeDepth,
+            int rodPattern, int patternMode, int heatSinkIndex,
+            @Nullable ResourceLocation simulationFuelId,
+            @Nullable CoolantDefinition coolantDef,
+            @Nullable BiPredicate<Integer, Integer> websiteRodOverride,
+            @Nullable BiPredicate<Integer, Integer> websiteHeatSinkCell,
+            @Nullable BiFunction<Integer, Integer, Integer> websiteHeatSinkOption) {
         int w = sizeLeft + sizeRight + 1;
         int h = sizeHeight + 1;
         int d = sizeDepth + 1;
@@ -991,13 +1011,17 @@ public final class ReactorSimulation {
         int rodColumns = rodColumnSet.size();
 
         // Heat sink counted over FULL interior (1..w-2, 1..h-2, 1..d-2), matching ReactorBuildLogic coolant placement.
+        boolean perCellWebsite = websiteHeatSinkOption != null;
         int countAdj = 0, countNon = 0;
+        double sumFuelAdjAcc = 0, sumEnergyAdjAcc = 0, sumOverheatingAdjAcc = 0;
+        double sumFuelNonAcc = 0, sumEnergyNonAcc = 0, sumOverheatingNonAcc = 0;
         if (rodPattern != RodPatternLogic.PATTERN_NONE) {
             for (int lx = 1; lx < w - 1; lx++) {
                 for (int ly = 1; ly < h - 1; ly++) {
                     for (int lz = 1; lz < d - 1; lz++) {
                         if (isSimInteriorCellRod(lx, ly, lz, w, h, d, insetXZ, rodSet)) continue;
                         boolean adjacentToRod;
+                        int cellHsOption = heatSinkIndex;
                         if (rodPattern == RodPatternLogic.PATTERN_WEBSITE) {
                             if (websiteHeatSinkCell == null) continue;
                             if (!isSimInRodSpace(lx, ly, lz, w, h, d, insetXZ)) continue;
@@ -1005,6 +1029,10 @@ public final class ReactorSimulation {
                             int rz = lz - insetXZ;
                             if (!websiteHeatSinkCell.test(rx, rz)) continue;
                             adjacentToRod = isSimInteriorCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rodSet);
+                            if (perCellWebsite) {
+                                Integer opt = websiteHeatSinkOption.apply(rx, rz);
+                                cellHsOption = opt != null ? opt : 0;
+                            }
                         } else if (rodPattern == RodPatternLogic.PATTERN_CUSTOM) {
                             adjacentToRod = false;
                         } else if (patternMode == RodPatternLogic.MODE_SUPER_ECONOMY) {
@@ -1015,17 +1043,37 @@ public final class ReactorSimulation {
                             adjacentToRod = isSimInteriorCellAdjacentToRod(lx, ly, lz, w, h, d, insetXZ, rodSet);
                             if (patternMode == RodPatternLogic.MODE_ECONOMY && !adjacentToRod) continue;
                         }
-                        if (adjacentToRod) countAdj++;
-                        else countNon++;
+                        if (perCellWebsite) {
+                            HeatSinkLoader.HeatSinkModifiers cellMod =
+                                    HeatSinkLoader.getModifiersForHeatSinkIndex(registryAccess, cellHsOption);
+                            if (adjacentToRod) {
+                                countAdj++;
+                                sumFuelAdjAcc += cellMod.fuelMultiplier();
+                                sumEnergyAdjAcc += cellMod.energyMultiplier();
+                                sumOverheatingAdjAcc += cellMod.overheatingMultiplier();
+                            } else {
+                                countNon++;
+                                sumFuelNonAcc += cellMod.fuelMultiplier();
+                                sumEnergyNonAcc += cellMod.energyMultiplier();
+                                sumOverheatingNonAcc += cellMod.overheatingMultiplier();
+                            }
+                        } else if (adjacentToRod) {
+                            countAdj++;
+                        } else {
+                            countNon++;
+                        }
                     }
                 }
             }
         }
         {
-            double[] fuelNon = {0};
-            double[] energyNon = {0};
-            double[] overheatNon = {0};
+            double[] fuelNon = {sumFuelNonAcc};
+            double[] energyNon = {sumEnergyNonAcc};
+            double[] overheatNon = {sumOverheatingNonAcc};
             countNon = capNonAdjacentHeatSinks(rodCount, countNon, fuelNon, energyNon, overheatNon);
+            sumFuelNonAcc = fuelNon[0];
+            sumEnergyNonAcc = energyNon[0];
+            sumOverheatingNonAcc = overheatNon[0];
         }
         int coolantBlockCount = countAdj + countNon;
 
@@ -1085,17 +1133,17 @@ public final class ReactorSimulation {
         double wNon = Config.HEAT_SINK_NON_ADJACENT_WEIGHT.get();
         double sumFuelRod = rodCount * rodMod.fuelMultiplier();
         double sumEnergyRod = rodCount * rodMod.energyMultiplier();
-        double sumFuelAdj = countAdj * heatSinkMod.fuelMultiplier();
-        double sumEnergyAdj = countAdj * heatSinkMod.energyMultiplier();
-        double sumFuelNon = countNon * heatSinkMod.fuelMultiplier();
-        double sumEnergyNon = countNon * heatSinkMod.energyMultiplier();
+        double sumFuelAdj = perCellWebsite ? sumFuelAdjAcc : countAdj * heatSinkMod.fuelMultiplier();
+        double sumEnergyAdj = perCellWebsite ? sumEnergyAdjAcc : countAdj * heatSinkMod.energyMultiplier();
+        double sumFuelNon = perCellWebsite ? sumFuelNonAcc : countNon * heatSinkMod.fuelMultiplier();
+        double sumEnergyNon = perCellWebsite ? sumEnergyNonAcc : countNon * heatSinkMod.energyMultiplier();
         double totalWeightedFuel = sumFuelRod + sumFuelAdj * wAdj + sumFuelNon * wNon;
         double totalWeightedEnergy = sumEnergyRod + sumEnergyAdj * wAdj + sumEnergyNon * wNon;
         double totalWeight = rodCount + countAdj * wAdj + countNon * wNon;
         double heatSinkFuelMult = (totalWeight > 0) ? (totalWeightedFuel / totalWeight) : 1.0;
         double heatSinkEnergyMult = (totalWeight > 0) ? (totalWeightedEnergy / totalWeight) : 1.0;
-        double sumOverheatingAdj = countAdj * heatSinkMod.overheatingMultiplier();
-        double sumOverheatingNon = countNon * heatSinkMod.overheatingMultiplier();
+        double sumOverheatingAdj = perCellWebsite ? sumOverheatingAdjAcc : countAdj * heatSinkMod.overheatingMultiplier();
+        double sumOverheatingNon = perCellWebsite ? sumOverheatingNonAcc : countNon * heatSinkMod.overheatingMultiplier();
 
         double rfMultiplier = coolantDef != null ? coolantDef.rfMultiplier() : 1.0;
         double mbMultiplier = coolantDef != null && coolantDef.mbMultiplier() > 0 ? coolantDef.mbMultiplier() : 1.0;
@@ -1113,7 +1161,8 @@ public final class ReactorSimulation {
         double curveStrengthAdjusted = 0.4 + 0.50 * curveStrength;
         double consumptionScale = Config.CONSUMPTION_SCALE.get() / Math.pow(effectiveRodCount + 1, 0.5 * curveStrengthAdjusted);
         double consumptionDivisor = Math.max(0.1, Config.HEAT_SINK_CONSUMPTION_DIVISOR.get());
-        double fuelConsumptionRate = baseFuelUnitsPerTick * consumptionMult * fuelEfficiency * effectiveRodCount * consumptionScale / mbMultiplier / heatSinkFuelMult / consumptionDivisor;
+        double fuelRodFactor = rodFuelScaling(effectiveRodCount);
+        double fuelConsumptionRate = baseFuelUnitsPerTick * consumptionMult * fuelEfficiency * fuelRodFactor * consumptionScale / mbMultiplier / heatSinkFuelMult / consumptionDivisor;
         if (countAdj + countNon > 0) {
             fuelConsumptionRate *= Math.max(0.1, Config.HEAT_SINK_FUEL_UNITS_MULTIPLIER.get());
         }

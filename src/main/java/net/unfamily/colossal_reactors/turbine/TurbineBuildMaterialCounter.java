@@ -43,7 +43,7 @@ public final class TurbineBuildMaterialCounter {
             int rodPattern, int coilIndex, int storedCoilSetting, boolean openTop) {
         return estimate(registryAccess, sizeLeft, sizeRight, sizeHeight, sizeDepth,
                 placementAxisIndex, rodPattern, coilIndex, storedCoilSetting, openTop,
-                null, false, Integer.MAX_VALUE);
+                null, false, Integer.MAX_VALUE, TurbineRodPatternLogic.VARIANT_EFFICIENT);
     }
 
     public static BuildMaterialCounts estimate(
@@ -55,7 +55,8 @@ public final class TurbineBuildMaterialCounter {
             boolean websiteClimbProfile) {
         return estimate(registryAccess, sizeLeft, sizeRight, sizeHeight, sizeDepth,
                 placementAxisIndex, rodPattern, coilIndex, storedCoilSetting, openTop,
-                websiteRodOverride, websiteClimbProfile, Integer.MAX_VALUE);
+                websiteRodOverride, websiteClimbProfile, Integer.MAX_VALUE,
+                TurbineRodPatternLogic.VARIANT_EFFICIENT);
     }
 
     public static BuildMaterialCounts estimate(
@@ -66,6 +67,21 @@ public final class TurbineBuildMaterialCounter {
             @Nullable BiPredicate<Integer, Integer> websiteRodOverride,
             boolean websiteClimbProfile,
             int websiteBladeRingCap) {
+        return estimate(registryAccess, sizeLeft, sizeRight, sizeHeight, sizeDepth,
+                placementAxisIndex, rodPattern, coilIndex, storedCoilSetting, openTop,
+                websiteRodOverride, websiteClimbProfile, websiteBladeRingCap,
+                TurbineRodPatternLogic.VARIANT_EFFICIENT);
+    }
+
+    public static BuildMaterialCounts estimate(
+            RegistryAccess registryAccess,
+            int sizeLeft, int sizeRight, int sizeHeight, int sizeDepth,
+            int placementAxisIndex,
+            int rodPattern, int coilIndex, int storedCoilSetting, boolean openTop,
+            @Nullable BiPredicate<Integer, Integer> websiteRodOverride,
+            boolean websiteClimbProfile,
+            int websiteBladeRingCap,
+            int bladeVariant) {
 
         int w = sizeLeft + sizeRight + 1;
         int h = sizeHeight + 1;
@@ -74,7 +90,7 @@ public final class TurbineBuildMaterialCounter {
         TurbineBuilderMetrics.Estimate plan = TurbineBuilderMetrics.fromShellSizes(
                 sizeLeft, sizeRight, sizeHeight, sizeDepth,
                 placementAxisIndex, storedCoilSetting, rodPattern, coilIndex,
-                websiteRodOverride, websiteClimbProfile, websiteBladeRingCap);
+                websiteRodOverride, websiteClimbProfile, websiteBladeRingCap, bladeVariant);
 
         int rw = TurbineRodPatternLogic.rodSpaceWidth(w);
         int rd = TurbineRodPatternLogic.rodSpaceDepth(d);

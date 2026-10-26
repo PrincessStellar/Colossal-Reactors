@@ -7,6 +7,7 @@ import net.unfamily.colossal_reactors.reactor.ReactorSimulation;
 
 import org.jetbrains.annotations.Nullable;
 
+import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
 /**
@@ -28,7 +29,7 @@ public final class ReactorBuilderSimulation {
             @Nullable ResourceLocation simulationFuelId,
             @Nullable CoolantDefinition coolantDef) {
         return run(registryAccess, sizeLeft, sizeRight, sizeHeight, sizeDepth,
-                rodPattern, patternMode, heatSinkIndex, simulationFuelId, coolantDef, null, null);
+                rodPattern, patternMode, heatSinkIndex, simulationFuelId, coolantDef, null, null, null);
     }
 
     public static ReactorSimulation.SimulationResult run(
@@ -39,13 +40,27 @@ public final class ReactorBuilderSimulation {
             @Nullable CoolantDefinition coolantDef,
             @Nullable BiPredicate<Integer, Integer> websiteRodOverride,
             @Nullable BiPredicate<Integer, Integer> websiteHeatSinkCell) {
+        return run(registryAccess, sizeLeft, sizeRight, sizeHeight, sizeDepth,
+                rodPattern, patternMode, heatSinkIndex, simulationFuelId, coolantDef,
+                websiteRodOverride, websiteHeatSinkCell, null);
+    }
+
+    public static ReactorSimulation.SimulationResult run(
+            RegistryAccess registryAccess,
+            int sizeLeft, int sizeRight, int sizeHeight, int sizeDepth,
+            int rodPattern, int patternMode, int heatSinkIndex,
+            @Nullable ResourceLocation simulationFuelId,
+            @Nullable CoolantDefinition coolantDef,
+            @Nullable BiPredicate<Integer, Integer> websiteRodOverride,
+            @Nullable BiPredicate<Integer, Integer> websiteHeatSinkCell,
+            @Nullable BiFunction<Integer, Integer, Integer> websiteHeatSinkOption) {
         // Keep a single source of truth for formulas to avoid drift between GUI and real runtime.
         return ReactorSimulation.simulateFromBuilderParams(
                 registryAccess,
                 sizeLeft, sizeRight, sizeHeight, sizeDepth,
                 rodPattern, patternMode, heatSinkIndex,
                 simulationFuelId, coolantDef,
-                websiteRodOverride, websiteHeatSinkCell
+                websiteRodOverride, websiteHeatSinkCell, websiteHeatSinkOption
         );
     }
 }
