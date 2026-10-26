@@ -765,6 +765,7 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
 
     /** Cycle builder mode: Website / Flow / HyperFlow / Custom / None. */
     public void cycleRodPattern(boolean next) {
+        int previous = rodPattern;
         if (next) rodPattern = (rodPattern + 1) % ROD_PATTERN_COUNT;
         else rodPattern = rodPattern <= 0 ? ROD_PATTERN_COUNT - 1 : rodPattern - 1;
         // Default Efficient whenever entering Flow / HyperFlow.
@@ -772,6 +773,15 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
             bladeVariant = TurbineRodPatternLogic.VARIANT_EFFICIENT;
         }
         clampCoilLayerCountToFit();
+        // Returning to Website: re-apply stored seed. In other modes the seed is kept but ignored.
+        if (rodPattern == TurbineRodPatternLogic.PATTERN_WEBSITE
+                && previous != TurbineRodPatternLogic.PATTERN_WEBSITE) {
+            String code = getWebsiteDesign();
+            if (code != null && !code.isEmpty()) {
+                net.unfamily.colossal_reactors.builder.web.BuilderWebsiteDesigns.applyToTurbineBuilder(this, code);
+                return;
+            }
+        }
         setChanged();
     }
 
@@ -1005,9 +1015,9 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
         output.putInt(TAG_BUILD_HEAT_LZ, buildHeatLz);
         output.putInt(TAG_BUILD_PROGRESS, buildProgressPercent);
         output.putBoolean(TAG_BUILD_PROGRESS_VISIBLE, buildProgressVisible);
-        if (websiteDesignCode != null && !websiteDesignCode.isEmpty()) {
-            output.putString(TAG_WEBSITE_DESIGN, websiteDesignCode);
-        }
+        // Always write so client sync cannot treat a missing key as "clear design"
+        // (that wiped the seed when cycling zone/rod coils to mdct2).
+        output.putString(TAG_WEBSITE_DESIGN, websiteDesignCode != null ? websiteDesignCode : "");
         ValueOutput markOut = output.child(TAG_MARK_INPUT_FILTERS);
         for (int i = 0; i < markInputFilters.size(); i++) {
             ItemStack filter = markInputFilters.get(i);
@@ -1072,14 +1082,11 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
                 bladeVariant = migrated[1];
             }
         }
-        String websiteRaw = input.getStringOr(TAG_WEBSITE_DESIGN, "");
-        if (websiteRaw != null && !websiteRaw.isEmpty()) {
-            websiteDesignCode = websiteRaw;
-            invalidateWebsiteRodCache();
-        } else {
-            websiteDesignCode = "";
+        if (input.getString(TAG_WEBSITE_DESIGN).isPresent()) {
+            websiteDesignCode = input.getStringOr(TAG_WEBSITE_DESIGN, "");
             invalidateWebsiteRodCache();
         }
+        // Missing key: keep existing code (partial/legacy packets must not wipe a valid seed).
         input.getString(TAG_PLACEMENT_AXIS).ifPresent(name -> {
             Direction parsed = Direction.byName(name);
             if (parsed != null) placementAxis = parsed;

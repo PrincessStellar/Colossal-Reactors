@@ -645,8 +645,17 @@ public class ReactorBuilderBlockEntity extends BlockEntity implements MenuProvid
 
     /** Cycle rod pattern: next=true next, next=false previous. */
     public void cycleRodPattern(boolean next) {
+        int previous = rodPattern;
         if (next) rodPattern = (rodPattern + 1) % ROD_PATTERN_COUNT;
         else rodPattern = rodPattern <= 0 ? ROD_PATTERN_COUNT - 1 : rodPattern - 1;
+        // Returning to Website: re-apply stored seed. In other modes the seed is kept but ignored.
+        if (rodPattern == RodPatternLogic.PATTERN_WEBSITE && previous != RodPatternLogic.PATTERN_WEBSITE) {
+            String code = getWebsiteDesign();
+            if (code != null && !code.isEmpty()) {
+                net.unfamily.colossal_reactors.builder.web.BuilderWebsiteDesigns.applyToReactorBuilder(this, code);
+                return;
+            }
+        }
         setChanged();
     }
 
@@ -872,9 +881,7 @@ public class ReactorBuilderBlockEntity extends BlockEntity implements MenuProvid
         output.putInt(TAG_BUILD_HEAT_LZ, buildHeatLz);
         output.putInt(TAG_BUILD_PROGRESS, buildProgressPercent);
         output.putBoolean(TAG_BUILD_PROGRESS_VISIBLE, buildProgressVisible);
-        if (websiteDesignCode != null && !websiteDesignCode.isEmpty()) {
-            output.putString(TAG_WEBSITE_DESIGN, websiteDesignCode);
-        }
+        output.putString(TAG_WEBSITE_DESIGN, websiteDesignCode != null ? websiteDesignCode : "");
         ValueOutput markOut = output.child(TAG_MARK_INPUT_FILTERS);
         for (int i = 0; i < markInputFilters.size(); i++) {
             ItemStack filter = markInputFilters.get(i);
@@ -929,14 +936,11 @@ public class ReactorBuilderBlockEntity extends BlockEntity implements MenuProvid
         openTop = input.getBooleanOr(TAG_OPEN_TOP, openTop);
         input.getInt(TAG_ROD_PATTERN).ifPresent(v -> rodPattern = Math.max(0, Math.min(ROD_PATTERN_COUNT - 1, v)));
         input.getInt(TAG_PATTERN_MODE).ifPresent(v -> patternMode = Math.max(0, Math.min(PATTERN_MODE_COUNT - 1, v)));
-        String websiteRaw = input.getStringOr(TAG_WEBSITE_DESIGN, "");
-        if (websiteRaw != null && !websiteRaw.isEmpty()) {
-            websiteDesignCode = websiteRaw;
-            invalidateWebsiteCellCache();
-        } else {
-            websiteDesignCode = "";
+        if (input.getString(TAG_WEBSITE_DESIGN).isPresent()) {
+            websiteDesignCode = input.getStringOr(TAG_WEBSITE_DESIGN, "");
             invalidateWebsiteCellCache();
         }
+        // Missing key: keep existing code (partial/legacy packets must not wipe a valid seed).
         building = input.getBooleanOr(TAG_BUILDING, building);
         invalidBlocksDetected = input.getBooleanOr(TAG_INVALID_BLOCKS, invalidBlocksDetected);
         buildStage = input.getIntOr(TAG_BUILD_STAGE, buildStage);

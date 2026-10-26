@@ -570,6 +570,10 @@ public class ReactorBuilderScreen extends AbstractContainerScreen<ReactorBuilder
 
     private void onDesignEdited(String value) {
         if (menu.getBlockEntity() == null) return;
+        // Seed is only meaningful on Website mode; stale EditBox callbacks must not snap pattern back.
+        if (!isWebsitePattern()) {
+            return;
+        }
         ClientPacketDistributor.sendToServer(new ReactorBuilderWebsiteDesignPayload(menu.getBlockPos(), value == null ? "" : value));
         if (value != null && !value.isBlank() && BuilderWebsiteDesigns.parseReactor(value).isEmpty()) {
             websiteStatusMessage = Component.translatable("gui.colossal_reactors.builder.invalid_website_design");

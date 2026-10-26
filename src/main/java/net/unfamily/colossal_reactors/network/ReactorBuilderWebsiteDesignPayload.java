@@ -13,9 +13,11 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.unfamily.colossal_reactors.ColossalReactors;
 import net.unfamily.colossal_reactors.blockentity.ReactorBuilderBlockEntity;
 import net.unfamily.colossal_reactors.builder.web.BuilderWebsiteDesigns;
+import net.unfamily.colossal_reactors.reactor.RodPatternLogic;
 
 /**
  * C2S: set or clear the ModDecoded reactor design code on the builder.
+ * Full apply only when already on Website mode; otherwise the seed is stored and ignored.
  */
 public record ReactorBuilderWebsiteDesignPayload(BlockPos pos, String designCode) implements CustomPacketPayload {
 
@@ -44,8 +46,10 @@ public record ReactorBuilderWebsiteDesignPayload(BlockPos pos, String designCode
                 String code = packet.designCode() == null ? "" : packet.designCode().trim();
                 if (code.isEmpty()) {
                     builder.setWebsiteDesign("");
-                } else {
+                } else if (builder.getRodPattern() == RodPatternLogic.PATTERN_WEBSITE) {
                     BuilderWebsiteDesigns.applyToReactorBuilder(builder, code);
+                } else {
+                    builder.setWebsiteDesign(code);
                 }
             }
         });

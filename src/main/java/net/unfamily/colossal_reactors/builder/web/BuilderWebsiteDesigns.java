@@ -155,8 +155,9 @@ public final class BuilderWebsiteDesigns {
     }
 
     /**
-     * Website {@code mdct1} coil token for a builder coil option index (0 → {@code air}).
-     * Resolved from {@code website.000_coil_selector_map}; unknown → first non-air website id.
+     * Website {@code mdct1}/{@code mdct2} coil token for a builder coil option index (0 → {@code air}).
+     * Prefer {@code website.000_coil_selector_map}; else derive a stable token from the selector
+     * so distinct options stay distinct when zone ≠ rod-column coil.
      */
     public static String websiteCoilIdForOptionIndex(int optionIndex) {
         if (optionIndex <= 0) {
@@ -174,6 +175,12 @@ public final class BuilderWebsiteDesigns {
             Optional<String> id = WebsiteSelectorMaps.websiteIdForCoilSelector(sel);
             if (id.isPresent()) {
                 return id.get();
+            }
+        }
+        for (String sel : def.validBlocks()) {
+            String derived = WebsiteSelectorMaps.websiteTokenFromSelector(sel);
+            if (derived != null && !"air".equals(derived)) {
+                return derived;
             }
         }
         return WebsiteSelectorMaps.firstNonAirCoilWebsiteId();
