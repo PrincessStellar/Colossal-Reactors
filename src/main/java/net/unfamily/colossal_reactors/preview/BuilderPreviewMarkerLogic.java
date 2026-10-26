@@ -16,23 +16,30 @@ import net.unfamily.colossal_reactors.reactor.ReactorValidation;
 import net.unfamily.colossal_reactors.reactor.RodPatternLogic;
 import net.unfamily.colossal_reactors.tags.ModBlockTags;
 import net.unfamily.colossal_reactors.turbine.ElecCoilLoader;
+import net.unfamily.colossal_reactors.turbine.TurbineBladePlacement;
 import net.unfamily.colossal_reactors.turbine.TurbineRodControllerLayout;
 import net.unfamily.colossal_reactors.turbine.TurbineRodPatternLogic;
 import net.unfamily.colossal_reactors.turbine.TurbineRotorLayout;
 import net.unfamily.colossal_reactors.turbine.TurbineValidation;
 
+import java.util.List;
+
 /**
  * Shared reactor/turbine footprint marker rules for server preview packets and client reconcile.
  * Always emits baseline colors together with occupied when both apply so layer cache can restore
- * purple/cyan/white/yellow after a wrong block is removed.
+ * after a wrong block is removed. Outer shell edges use AreaBorderRenderer on the client —
+ * this logic no longer emits {@link #COLOR_FRAME_EDGE} per cell.
  */
 public final class BuilderPreviewMarkerLogic {
 
     public static final int COLOR_OCCUPIED = 0xE0FF0000;
     public static final int COLOR_ROD = 0xE0FFFF00;
     public static final int COLOR_ROD_CONTROLLER = 0xE0FFFFFF;
+    /** Legacy magenta edge (shell now via AreaBorder); kept for priority / old packets. */
     public static final int COLOR_FRAME_EDGE = 0x80FF00FF;
     public static final int COLOR_CLOSURE_DECK = 0xE070D8FF;
+    /** Planned turbine blade cells (orange). */
+    public static final int COLOR_BLADE = 0xE0FF9A3C;
 
     @FunctionalInterface
     public interface MarkerSink {
@@ -77,7 +84,6 @@ public final class BuilderPreviewMarkerLogic {
             for (int ly = 1; ly < h - 1; ly++) {
                 for (int lz = insetXZ; lz < d - insetXZ; lz++) {
                     int rx = lx - insetXZ;
-                    int ry = ly - 1;
                     int rz = lz - insetXZ;
                     if (isReactorRodColumn(builder, rx, rz, rw, rd, pattern, expansionRodAtCenter)) {
                         sink.accept(new BlockPos(minX + lx, minY + ly, minZ + lz), COLOR_ROD);
@@ -107,9 +113,6 @@ public final class BuilderPreviewMarkerLogic {
                     int lz = z - minZ;
                     boolean onBorder = (x == minX || x == maxX || y == minY || y == maxY || z == minZ || z == maxZ);
                     boolean hasBlock = hasSolidBlock(blockState);
-                    boolean onEdge = ((x == minX || x == maxX) && (y == minY || y == maxY))
-                            || ((x == minX || x == maxX) && (z == minZ || z == maxZ))
-                            || ((y == minY || y == maxY) && (z == minZ || z == maxZ));
 
                     if (onBorder) {
                         boolean validFrame = ReactorValidation.isShellBlock(blockState)
@@ -117,11 +120,6 @@ public final class BuilderPreviewMarkerLogic {
                                 && isReactorRodColumn(builder, x - minX - insetXZ, z - minZ - insetXZ, rw, rd, pattern, expansionRodAtCenter));
                         if (hasBlock && !validFrame) {
                             sink.accept(pos, COLOR_OCCUPIED);
-                            if (onEdge) {
-                                sink.accept(pos, COLOR_FRAME_EDGE);
-                            }
-                        } else if (onEdge) {
-                            sink.accept(pos, COLOR_FRAME_EDGE);
                         }
                     } else {
                         boolean isRodPos = (lx >= insetXZ && lx < w - insetXZ && ly >= 1 && ly < h - 1 && lz >= insetXZ && lz < d - insetXZ)
@@ -182,7 +180,7 @@ public final class BuilderPreviewMarkerLogic {
                 pattern == TurbineRodPatternLogic.PATTERN_WEBSITE && builder.hasValidWebsiteDesign()
                         ? builder::websiteIsRodColumn
                         : null;
-        java.util.List<TurbineRodControllerLayout.Center> rodCtrlCenters =
+        List<TurbineRodControllerLayout.Center> rodCtrlCenters =
                 TurbineRodPatternLogic.rodColumns(rw, rd, pattern, websiteRodOverride);
 
         for (int lx = inset; lx < w - inset; lx++) {
@@ -206,6 +204,8 @@ public final class BuilderPreviewMarkerLogic {
             }
         }
 
+        emitPlannedBlades(builder, layout, pattern, rodCtrlCenters, websiteRodOverride, sink);
+
         for (int x = minX; x <= maxX; x++) {
             for (int y = minY; y <= maxY; y++) {
                 for (int z = minZ; z <= maxZ; z++) {
@@ -216,9 +216,6 @@ public final class BuilderPreviewMarkerLogic {
                     BlockState blockState = level.getBlockState(pos);
                     boolean onBorder = (x == minX || x == maxX || y == minY || y == maxY || z == minZ || z == maxZ);
                     boolean hasBlock = hasSolidBlock(blockState);
-                    boolean onEdge = ((x == minX || x == maxX) && (y == minY || y == maxY))
-                            || ((x == minX || x == maxX) && (z == minZ || z == maxZ))
-                            || ((y == minY || y == maxY) && (z == minZ || z == maxZ));
 
                     if (onBorder) {
                         if (layout.isOpenEndCapWorld(x, y, z) && builder.isOpenTop() && blockState.isAir()) {
@@ -229,13 +226,9 @@ public final class BuilderPreviewMarkerLogic {
                                 && isAnyRodControllerCell(layout, rodCtrlCenters, x, y, z));
                         if (hasBlock && !validFrame) {
                             sink.accept(pos, COLOR_OCCUPIED);
-                            if (onEdge) {
-                                int edgeColor = layout.isClosureDeckWorld(x, y, z) ? COLOR_CLOSURE_DECK : COLOR_FRAME_EDGE;
-                                sink.accept(pos, edgeColor);
-                            }
-                        } else if (onEdge) {
-                            int edgeColor = layout.isClosureDeckWorld(x, y, z) ? COLOR_CLOSURE_DECK : COLOR_FRAME_EDGE;
-                            sink.accept(pos, edgeColor);
+                        }
+                        if (layout.isClosureDeckWorld(x, y, z)) {
+                            sink.accept(pos, COLOR_CLOSURE_DECK);
                         }
                     } else if (layout.isInRodZone(x, y, z)) {
                         int rx = layout.crossAFromWorld(x, y, z);
@@ -281,8 +274,45 @@ public final class BuilderPreviewMarkerLogic {
         }
     }
 
+    private static void emitPlannedBlades(
+            TurbineBuilderBlockEntity builder,
+            TurbineRotorLayout layout,
+            int pattern,
+            List<TurbineRodControllerLayout.Center> rodCtrlCenters,
+            java.util.function.BiPredicate<Integer, Integer> websiteRodOverride,
+            MarkerSink sink) {
+        if (rodCtrlCenters.isEmpty() || layout.rodExtent() <= 0) {
+            return;
+        }
+        boolean websiteClimb = pattern == TurbineRodPatternLogic.PATTERN_WEBSITE
+                && builder.hasValidWebsiteDesign()
+                && builder.isWebsiteClimbProfile();
+        int growth = TurbineRodPatternLogic.resolveBladeGrowth(pattern, builder.getBladeVariant(), websiteClimb);
+        int rw = layout.crossSizeA();
+        int rd = layout.crossSizeB();
+        int ringCap = TurbineRodPatternLogic.designBladeRingCap(
+                pattern, rw, rd, builder.getWebsiteBladeRingCap());
+        Direction rodAxis = layout.growthAxis();
+        List<Direction> laterals = TurbineBladePlacement.lateralDirections(rodAxis);
+        for (int t = 0; t < layout.rodExtent(); t++) {
+            for (TurbineRodControllerLayout.Center col : rodCtrlCenters) {
+                int ring = TurbineBladePlacement.effectiveTargetBladeRing(
+                        layout, t, growth, col.rx(), col.rz(), List.of(), ringCap);
+                if (ring <= 0) {
+                    continue;
+                }
+                BlockPos rodPos = layout.rodPos(t, col.rx(), col.rz());
+                for (Direction lateral : laterals) {
+                    for (int r = 1; r <= ring; r++) {
+                        sink.accept(rodPos.relative(lateral, r), COLOR_BLADE);
+                    }
+                }
+            }
+        }
+    }
+
     private static boolean isAnyRodControllerCell(
-            TurbineRotorLayout layout, java.util.List<TurbineRodControllerLayout.Center> centers,
+            TurbineRotorLayout layout, List<TurbineRodControllerLayout.Center> centers,
             int x, int y, int z) {
         for (TurbineRodControllerLayout.Center center : centers) {
             if (layout.isRodControllerAt(x, y, z, center)) {

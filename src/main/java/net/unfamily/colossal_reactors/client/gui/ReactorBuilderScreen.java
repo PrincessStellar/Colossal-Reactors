@@ -320,7 +320,7 @@ public class ReactorBuilderScreen extends AbstractContainerScreen<ReactorBuilder
 
         designEditBox = new EditBox(font, leftPos + DESIGN_EDIT_X, topPos + DESIGN_EDIT_Y, DESIGN_EDIT_W, DESIGN_EDIT_H,
                 Component.translatable("gui.colossal_reactors.builder.website_design"));
-        designEditBox.setMaxLength(512);
+        designEditBox.setMaxLength(Integer.MAX_VALUE);
         designEditBox.setTooltip(Tooltip.create(Component.translatable("gui.colossal_reactors.builder.website_design.tooltip")));
         designEditBox.setResponder(this::onDesignEdited);
         if (menu.getBlockEntity() != null) {
@@ -773,6 +773,14 @@ public class ReactorBuilderScreen extends AbstractContainerScreen<ReactorBuilder
         buttonLeft.setTooltip(tooltipWithValue("gui.colossal_reactors.reactor_builder.tooltip.left_value", menu.getSizeLeft()));
         buttonRight.setTooltip(tooltipWithValue("gui.colossal_reactors.reactor_builder.tooltip.right_value", menu.getSizeRight()));
         buttonDown.setTooltip(tooltipWithValue("gui.colossal_reactors.reactor_builder.tooltip.behind_value", menu.getSizeD() + 1));
+        if (buttonOffsetLeft != null) {
+            buttonOffsetLeft.setTooltip(Tooltip.create(
+                    Component.translatable("gui.colossal_reactors.builder.tooltip.offset_left")));
+        }
+        if (buttonOffsetRight != null) {
+            buttonOffsetRight.setTooltip(Tooltip.create(
+                    Component.translatable("gui.colossal_reactors.builder.tooltip.offset_right")));
+        }
         // Button 0: Pattern
         rightBlockButtons[0].setTooltip(Tooltip.create(
                 Component.translatable("gui.colossal_reactors.reactor_builder.tooltip.pattern." + menu.getRodPattern())

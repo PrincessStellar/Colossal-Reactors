@@ -338,7 +338,7 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
 
         designEditBox = new EditBox(font, leftPos + DESIGN_EDIT_X, topPos + DESIGN_EDIT_Y, DESIGN_EDIT_W, DESIGN_EDIT_H,
                 Component.translatable("gui.colossal_reactors.builder.website_design"));
-        designEditBox.setMaxLength(512);
+        designEditBox.setMaxLength(Integer.MAX_VALUE);
         designEditBox.setTooltip(Tooltip.create(Component.translatable("gui.colossal_reactors.builder.website_design.tooltip")));
         designEditBox.setResponder(this::onDesignEdited);
         if (menu.getBlockEntity() != null) {
@@ -441,6 +441,8 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
     }
 
     private int computePreviewSettingsHash() {
+        String design = menu.getBlockEntity() != null ? menu.getBlockEntity().getWebsiteDesign() : "";
+        int bladeVariant = menu.getBlockEntity() != null ? menu.getBlockEntity().getBladeVariant() : 0;
         return java.util.Objects.hash(
                 menu.getSizeLeft(),
                 menu.getSizeRight(),
@@ -450,6 +452,8 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
                 menu.getSelectedRodCoilIndex(),
                 menu.getCoilLayerCount(),
                 menu.getRodPattern(),
+                bladeVariant,
+                design,
                 menu.isOpenTop(),
                 menu.getPlacementAxisOrdinal());
     }
@@ -806,6 +810,14 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
         buttonLeft.setTooltip(tooltipWithValue("gui.colossal_reactors.turbine_builder.tooltip.left_value", menu.getSizeLeft()));
         buttonRight.setTooltip(tooltipWithValue("gui.colossal_reactors.turbine_builder.tooltip.right_value", menu.getSizeRight()));
         buttonDown.setTooltip(tooltipWithValue("gui.colossal_reactors.turbine_builder.tooltip.behind_value", menu.getSizeD() + 1));
+        if (buttonOffsetLeft != null) {
+            buttonOffsetLeft.setTooltip(Tooltip.create(
+                    Component.translatable("gui.colossal_reactors.builder.tooltip.offset_left")));
+        }
+        if (buttonOffsetRight != null) {
+            buttonOffsetRight.setTooltip(Tooltip.create(
+                    Component.translatable("gui.colossal_reactors.builder.tooltip.offset_right")));
+        }
         // Button 0: Pattern
         rightBlockButtons[0].setTooltip(Tooltip.create(
                 Component.translatable("gui.colossal_reactors.turbine_builder.tooltip.pattern." + menu.getRodPattern())

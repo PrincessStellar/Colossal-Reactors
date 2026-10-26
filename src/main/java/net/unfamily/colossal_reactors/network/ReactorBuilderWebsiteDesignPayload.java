@@ -25,7 +25,7 @@ public record ReactorBuilderWebsiteDesignPayload(BlockPos pos, String designCode
     public static final StreamCodec<FriendlyByteBuf, ReactorBuilderWebsiteDesignPayload> STREAM_CODEC = StreamCodec.composite(
             BlockPos.STREAM_CODEC,
             ReactorBuilderWebsiteDesignPayload::pos,
-            ByteBufCodecs.STRING_UTF8,
+            ByteBufCodecs.stringUtf8(1 << 20),
             ReactorBuilderWebsiteDesignPayload::designCode,
             ReactorBuilderWebsiteDesignPayload::new
     );
