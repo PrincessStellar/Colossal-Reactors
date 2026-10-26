@@ -123,7 +123,8 @@ public class ReactorBuilderScreen extends AbstractContainerScreen<ReactorBuilder
     /**
      * Arrow block left edge = inventory left edge (35).
      */
-    private static final int GROUP_LEFT_X = INVENTORY_LEFT_X;
+    /** Arrow / Center / Preview sit just right of the tank (inventory stays at {@link #INVENTORY_LEFT_X}). */
+    private static final int GROUP_LEFT_X = FLUID_BAR_X + TANK_OUTER_W + GAP;
     private static final int BUTTON_UP_X = GROUP_LEFT_X + ARROW_GROUP_WIDTH / 2 - BUTTON_W / 2;
     private static final int BUTTON_OFFSET_L_X = BUTTON_UP_X - BUTTON_W - GAP;
     private static final int BUTTON_OFFSET_R_X = BUTTON_UP_X + BUTTON_W + GAP;
@@ -149,8 +150,10 @@ public class ReactorBuilderScreen extends AbstractContainerScreen<ReactorBuilder
      * On Website: PatternMode is replaced by Open Link; HeatSink stays visible blank/inactive.
      */
     private static final int RIGHT_EDGE_INSET = 12;
-    private static final int RIGHT_BUTTON_W = 44;
-    private static final int RIGHT_BLOCK_X = GUI_WIDTH - RIGHT_EDGE_INSET - (3 * RIGHT_BUTTON_W + 2 * GAP);
+    /** Sit immediately after the arrow cluster (same gap as on 230), then fill to the right inset. */
+    private static final int RIGHT_BLOCK_X = GROUP_LEFT_X + ARROW_GROUP_WIDTH + GAP;
+    private static final int RIGHT_BUTTON_W =
+            (GUI_WIDTH - RIGHT_EDGE_INSET - RIGHT_BLOCK_X - 2 * GAP) / 3; // 45 on 250-wide
     private static final int RIGHT_BUTTON_H = BUTTON_H;
     private static final int RIGHT_COL0_X = RIGHT_BLOCK_X;
     private static final int RIGHT_COL1_X = RIGHT_BLOCK_X + RIGHT_BUTTON_W + GAP;
@@ -879,6 +882,7 @@ public class ReactorBuilderScreen extends AbstractContainerScreen<ReactorBuilder
             if (designEditBox != null && designEditBox.visible && isInWidget(x, y, designEditBox)) {
                 designEditBox.setValue("");
                 onDesignEdited("");
+                playGuiClickSound();
                 return true;
             }
             if (viewMode == ViewMode.SIMULATION && coolantCycleButton != null && coolantCycleButton.visible && isInWidget(x, y, coolantCycleButton)) {

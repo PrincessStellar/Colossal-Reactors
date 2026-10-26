@@ -118,7 +118,8 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
     /**
      * Arrow block left edge = inventory left edge (35).
      */
-    private static final int GROUP_LEFT_X = INVENTORY_LEFT_X;
+    /** Arrow / Center / Preview sit just right of the tank (inventory stays at {@link #INVENTORY_LEFT_X}). */
+    private static final int GROUP_LEFT_X = FLUID_BAR_X + TANK_OUTER_W + GAP;
     private static final int BUTTON_UP_X = GROUP_LEFT_X + ARROW_GROUP_WIDTH / 2 - BUTTON_W / 2;
     private static final int BUTTON_OFFSET_L_X = BUTTON_UP_X - BUTTON_W - GAP;
     private static final int BUTTON_OFFSET_R_X = BUTTON_UP_X + BUTTON_W + GAP;
@@ -146,29 +147,34 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
      * Placement moves to the ←/−/→ row (those size arrows are unused for seeds).
      */
     private static final int RIGHT_EDGE_INSET = 12;
-    private static final int RIGHT_BUTTON_W = 44;
-    private static final int RIGHT_BLOCK_X = GUI_WIDTH - RIGHT_EDGE_INSET - (3 * RIGHT_BUTTON_W + 2 * GAP);
+    /** Sit immediately after the arrow cluster (same gap as on 230), then fill to the right inset. */
+    private static final int RIGHT_BLOCK_X = GROUP_LEFT_X + ARROW_GROUP_WIDTH + GAP;
+    private static final int RIGHT_BUTTON_W =
+            (GUI_WIDTH - RIGHT_EDGE_INSET - RIGHT_BLOCK_X - 2 * GAP) / 3; // 45 on 250-wide
     private static final int RIGHT_BUTTON_H = BUTTON_H;
     private static final int RIGHT_COL0_X = RIGHT_BLOCK_X;
     private static final int RIGHT_COL1_X = RIGHT_BLOCK_X + RIGHT_BUTTON_W + GAP;
     private static final int RIGHT_COL2_X = RIGHT_BLOCK_X + 2 * (RIGHT_BUTTON_W + GAP);
     private static final int RIGHT_ROW0_Y = ROW1_Y;
     private static final int RIGHT_ROW1_Y = MARK_INPUT_BUTTON_Y;
-    /** Preview under Center, same width as Center; Coil layers beside it (2 right-button widths). */
+    /** Preview under Center, same width as Center. */
     private static final int PREVIEW_BUTTON_Y = CENTER_BUTTON_Y + BUTTON_H + GAP;
     private static final int PREVIEW_BUTTON_W = CENTER_BUTTON_W;
     private static final int PREVIEW_BUTTON_X = CENTER_BUTTON_X;
-    private static final int COIL_LAYERS_BUTTON_X = PREVIEW_BUTTON_X + PREVIEW_BUTTON_W + GAP;
-    private static final int COIL_LAYERS_BUTTON_Y = PREVIEW_BUTTON_Y;
-    private static final int COIL_LAYERS_BUTTON_W = 2 * RIGHT_BUTTON_W + GAP;
     /** Over Placement (col1) so Coil can stay last of row 0 on Website. */
     private static final int OPEN_LINK_BUTTON_X = RIGHT_COL1_X;
     private static final int OPEN_LINK_BUTTON_Y = RIGHT_ROW0_Y;
-    /** Seed EditBox starts immediately after ←/−/→ (row 2); spans to the right edge inset. */
-    private static final int DESIGN_EDIT_X = BUTTON_RIGHT_X + BUTTON_W + GAP;
+    /**
+     * Efficient / Website EditBox: 2 right-button widths after ←/−/→;
+     * Coil layers (secondary top coil height) sits in the remaining col2 slot beside it.
+     */
+    private static final int DESIGN_EDIT_X = RIGHT_COL0_X;
     private static final int DESIGN_EDIT_Y = ROW2_Y;
-    private static final int DESIGN_EDIT_W = GUI_WIDTH - RIGHT_EDGE_INSET - DESIGN_EDIT_X;
+    private static final int DESIGN_EDIT_W = 2 * RIGHT_BUTTON_W + GAP;
     private static final int DESIGN_EDIT_H = BUTTON_H;
+    private static final int COIL_LAYERS_BUTTON_X = RIGHT_COL2_X;
+    private static final int COIL_LAYERS_BUTTON_Y = DESIGN_EDIT_Y;
+    private static final int COIL_LAYERS_BUTTON_W = RIGHT_BUTTON_W;
     private static final int BUILD_BUTTON_COL_X = RIGHT_COL2_X;
 
     private int buildPercentTextX(Component percentText) {
@@ -925,69 +931,82 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
             if (designEditBox != null && designEditBox.visible && isInWidget(x, y, designEditBox)) {
                 designEditBox.setValue("");
                 onDesignEdited("");
+                playUiClickSound();
                 return true;
             }
             if (viewMode == ViewMode.SIMULATION && steamGenerationButton != null && steamGenerationButton.visible && isInWidget(x, y, steamGenerationButton)) {
                 cycleSimulationGeneration(false);
+                playUiClickSound();
                 return true;
             }
             if (buttonOffsetLeft != null && buttonOffsetLeft.visible && isInWidget(x, y, buttonOffsetLeft)) {
-                playUiClickSound();
                 sendSize(4, false);
+                playUiClickSound();
                 return true;
             }
             if (buttonOffsetRight != null && buttonOffsetRight.visible && isInWidget(x, y, buttonOffsetRight)) {
-                playUiClickSound();
                 sendSize(5, false);
+                playUiClickSound();
                 return true;
             }
             if (isInBounds(x, y, leftPos + BUTTON_UP_X, topPos + ROW1_Y)) {
                 sendSize(0, false);
+                playUiClickSound();
                 return true;
             }
             if (buttonLeft != null && buttonLeft.active && isInBounds(x, y, leftPos + BUTTON_LEFT_X, topPos + ROW2_Y)) {
                 sendSize(1, false);
+                playUiClickSound();
                 return true;
             }
             if (buttonDown != null && buttonDown.active && isInBounds(x, y, leftPos + BUTTON_DOWN_X, topPos + ROW2_Y)) {
                 sendSize(3, false);
+                playUiClickSound();
                 return true;
             }
             if (buttonRight != null && buttonRight.active && isInBounds(x, y, leftPos + BUTTON_RIGHT_X, topPos + ROW2_Y)) {
                 sendSize(2, false);
+                playUiClickSound();
                 return true;
             }
             if (coilLayersButton != null && coilLayersButton.visible && isInWidget(x, y, coilLayersButton)) {
                 onCoilLayersClick(false);
+                playUiClickSound();
                 return true;
             }
             if (buttonBladeVariant != null && buttonBladeVariant.visible && buttonBladeVariant.active
                     && isInWidget(x, y, buttonBladeVariant)) {
                 cycleBladeVariant(false);
+                playUiClickSound();
                 return true;
             }
             if (isInRightBlockButton(x, y, 0)) {
                 if (menu.getBlockEntity() != null)
                     ClientPacketDistributor.sendToServer(new TurbineBuilderOptionPayload(menu.getBlockPos(), 1, false));  // Pattern
+                playUiClickSound();
                 return true;
             }
             if (buttonWebsitePlacement != null && buttonWebsitePlacement.visible
                     && isInWidget(x, y, buttonWebsitePlacement)) {
                 cyclePlacementAxis(false);
+                playUiClickSound();
                 return true;
             }
             if (isInRightBlockButton(x, y, 1)) {
                 cyclePlacementAxis(false);
+                playUiClickSound();
                 return true;
             }
             if (isInRightBlockButton(x, y, 2)) {
                 if (menu.getBlockEntity() != null)
                     ClientPacketDistributor.sendToServer(new TurbineBuilderCoilPayload(menu.getBlockPos(), false));  // Coil
+                playUiClickSound();
                 return true;
             }
             if (isInRightBlockButton(x, y, 3)) {
                 if (menu.getBlockEntity() != null)
                     ClientPacketDistributor.sendToServer(new TurbineBuilderOptionPayload(menu.getBlockPos(), 0, true));  // OpenTop toggle
+                playUiClickSound();
                 return true;
             }
         }
