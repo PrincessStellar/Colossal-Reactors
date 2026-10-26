@@ -848,6 +848,8 @@ public class TurbineBuilderScreen extends AbstractContainerScreen<TurbineBuilder
         rightBlockButtons[2].setTooltip(Tooltip.create(
                 Component.translatable("gui.colossal_reactors.turbine_builder.tooltip.coil_value", coilName)
                         .append(Component.literal("\n"))
+                        .append(Component.translatable("gui.colossal_reactors.turbine_builder.tooltip.coil"))
+                        .append(Component.literal("\n"))
                         .append(Component.translatable("gui.colossal_reactors.turbine_builder.tooltip.coil_left"))
                         .append(Component.literal("\n"))
                         .append(Component.translatable("gui.colossal_reactors.turbine_builder.tooltip.coil_right"))));

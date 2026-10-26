@@ -168,10 +168,10 @@ public class ReactorBuilderScreen extends AbstractContainerScreen<ReactorBuilder
     private static final int PREVIEW_BUTTON_X = CENTER_BUTTON_X;
     private static final int OPEN_LINK_BUTTON_X = RIGHT_COL1_X;
     private static final int OPEN_LINK_BUTTON_Y = RIGHT_ROW0_Y;
-    /** Seed EditBox starts immediately after ←/−/→ (row 2); spans to the right edge inset. */
-    private static final int DESIGN_EDIT_X = BUTTON_RIGHT_X + BUTTON_W + GAP;
+    /** Seed EditBox after ←/−/→ (row 2); same width as the 3 right-button columns (not past their edge). */
+    private static final int DESIGN_EDIT_X = RIGHT_COL0_X;
     private static final int DESIGN_EDIT_Y = ROW2_Y;
-    private static final int DESIGN_EDIT_W = GUI_WIDTH - RIGHT_EDGE_INSET - DESIGN_EDIT_X;
+    private static final int DESIGN_EDIT_W = 3 * RIGHT_BUTTON_W + 2 * GAP;
     private static final int DESIGN_EDIT_H = BUTTON_H;
 
     private int buildPercentTextX(Component percentText) {
