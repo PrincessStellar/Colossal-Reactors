@@ -93,6 +93,11 @@ public final class BuilderWebsiteDesigns {
         int coilIdx = findCoilOptionIndex(design.coilId());
         if (coilIdx >= 0) {
             builder.setSelectedCoilIndex(coilIdx);
+        }
+        int rodCoilIdx = findCoilOptionIndex(design.effectiveRodCoilId());
+        if (rodCoilIdx >= 0) {
+            builder.setSelectedRodCoilIndex(rodCoilIdx);
+        } else if (coilIdx >= 0) {
             builder.setSelectedRodCoilIndex(coilIdx);
         }
         builder.setWebsiteDesign(design.code());
@@ -188,8 +193,9 @@ public final class BuilderWebsiteDesigns {
     }
 
     /**
-     * When the turbine builder is on Website pattern with a valid seed, rewrite the seed's coil id
-     * (and layer count) from the current builder selection so the EditBox / design stay in sync.
+     * When the turbine builder is on Website pattern with a valid seed, rewrite the seed's zone /
+     * rod-column coil ids (and layer count) from the current builder selection so the EditBox stays in sync.
+     * Distinct rod coil → {@code mdct2}; same as zone → {@code mdct1}.
      */
     public static void syncTurbineWebsiteSeedFromCoilSelection(TurbineBuilderBlockEntity builder) {
         if (builder == null || builder.getRodPattern() != TurbineRodPatternLogic.PATTERN_WEBSITE) {
@@ -200,8 +206,13 @@ public final class BuilderWebsiteDesigns {
             return;
         }
         String coilId = websiteCoilIdForOptionIndex(builder.getSelectedCoilIndex());
+        String rodCoilId = websiteCoilIdForOptionIndex(builder.getSelectedRodCoilIndex());
+        if (rodCoilId.equals(coilId)) {
+            rodCoilId = null;
+        }
         ModDecodedTurbineDesign updated = parsed.get()
                 .withCoilId(coilId)
+                .withRodCoilId(rodCoilId)
                 .withCoilLayers(builder.getCoilLayerCount());
         builder.setWebsiteDesign(updated.code());
     }

@@ -801,7 +801,7 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
         setChanged();
     }
 
-    /** Cycle elec coil block type. On Website pattern, also rewrites the mdct1 seed coil token. */
+    /** Cycle elec coil block type. On Website pattern, also rewrites the mdct1/mdct2 seed coil token. */
     public void cycleCoil(boolean next) {
         int max = ElecCoilLoader.getCoilOptionCount() - 1;
         if (next) selectedCoilIndex = selectedCoilIndex >= max ? 0 : selectedCoilIndex + 1;
@@ -810,11 +810,12 @@ public class TurbineBuilderBlockEntity extends BlockEntity implements MenuProvid
         setChanged();
     }
 
-    /** Cycle coil material for rod-column cells in the coil zone (does not rewrite website seed). */
+    /** Cycle coil material for rod-column cells; on Website pattern also rewrites mdct1/mdct2 rodCoil. */
     public void cycleRodCoil(boolean next) {
         int max = ElecCoilLoader.getCoilOptionCount() - 1;
         if (next) selectedRodCoilIndex = selectedRodCoilIndex >= max ? 0 : selectedRodCoilIndex + 1;
         else selectedRodCoilIndex = selectedRodCoilIndex <= 0 ? max : selectedRodCoilIndex - 1;
+        net.unfamily.colossal_reactors.builder.web.BuilderWebsiteDesigns.syncTurbineWebsiteSeedFromCoilSelection(this);
         setChanged();
     }
 
