@@ -138,7 +138,7 @@ public class MelterRecipeCategory implements IRecipeCategory<MelterJeiRecipe> {
     }
 
     @Override
-    public @Nullable Identifier getRegistryName(MelterJeiRecipe recipe) {
+    public @Nullable Identifier getIdentifier(MelterJeiRecipe recipe) {
         return ViewerRecipeIds.registryName(recipe.recipeId());
     }
 }

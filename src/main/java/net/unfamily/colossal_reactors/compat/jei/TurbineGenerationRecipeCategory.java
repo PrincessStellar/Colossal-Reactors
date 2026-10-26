@@ -123,7 +123,7 @@ public class TurbineGenerationRecipeCategory implements IRecipeCategory<TurbineJ
     }
 
     @Override
-    public @Nullable Identifier getRegistryName(TurbineJeiRecipe recipe) {
+    public @Nullable Identifier getIdentifier(TurbineJeiRecipe recipe) {
         return ViewerRecipeIds.registryName(recipe.recipeId());
     }
 }

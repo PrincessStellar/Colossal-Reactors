@@ -142,7 +142,7 @@ public class CoolantRecipeCategory implements IRecipeCategory<CoolantJeiRecipe> 
     }
 
     @Override
-    public @Nullable Identifier getRegistryName(CoolantJeiRecipe recipe) {
+    public @Nullable Identifier getIdentifier(CoolantJeiRecipe recipe) {
         return ViewerRecipeIds.registryName(recipe.recipeId());
     }
 }

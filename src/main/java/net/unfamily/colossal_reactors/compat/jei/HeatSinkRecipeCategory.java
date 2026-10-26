@@ -108,7 +108,7 @@ public class HeatSinkRecipeCategory implements IRecipeCategory<HeatSinkJeiRecipe
     }
 
     @Override
-    public @Nullable Identifier getRegistryName(HeatSinkJeiRecipe recipe) {
+    public @Nullable Identifier getIdentifier(HeatSinkJeiRecipe recipe) {
         return ViewerRecipeIds.registryName(recipe.recipeId());
     }
 }

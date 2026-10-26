@@ -11,7 +11,9 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Loads melter heat definitions from datapack (type colossal_reactors:melter_heats).
@@ -29,10 +31,55 @@ public final class MelterHeatsLoader {
     private static List<MelterHeatEntry> rawEntries = List.of();
 
     public static void applyLoaded(List<MelterHeatEntry> loaded) {
-        rawEntries = loaded != null ? List.copyOf(loaded) : List.of();
+        rawEntries = mergeLastWinsBySelectors(loaded);
         if (DatapackSelectorValidator.registriesReady()) {
             rebuild();
         }
+    }
+
+    /** Same block/fluid selector sets → last entry wins (addon replace). */
+    public static String mergeKey(MelterHeatEntry entry) {
+        if (entry == null) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < entry.blockIds().size(); i++) {
+            if (i > 0) {
+                sb.append('\u0001');
+            }
+            if (Boolean.TRUE.equals(entry.blockIdIsTag().get(i))) {
+                sb.append('#');
+            }
+            sb.append(entry.blockIds().get(i));
+        }
+        sb.append('\u0002');
+        for (int i = 0; i < entry.fluidIds().size(); i++) {
+            if (i > 0) {
+                sb.append('\u0001');
+            }
+            if (Boolean.TRUE.equals(entry.fluidIdIsTag().get(i))) {
+                sb.append('#');
+            }
+            sb.append(entry.fluidIds().get(i));
+        }
+        return sb.toString();
+    }
+
+    private static List<MelterHeatEntry> mergeLastWinsBySelectors(@Nullable List<MelterHeatEntry> loaded) {
+        if (loaded == null || loaded.isEmpty()) {
+            return List.of();
+        }
+        Map<String, MelterHeatEntry> byKey = new LinkedHashMap<>();
+        for (MelterHeatEntry entry : loaded) {
+            if (entry == null) {
+                continue;
+            }
+            String key = mergeKey(entry);
+            if (!key.isEmpty() && !"\u0002".equals(key)) {
+                byKey.put(key, entry);
+            }
+        }
+        return List.copyOf(byKey.values());
     }
 
     /** Re-resolve block/fluid selectors when registries/tags are bound to a loaded level. */

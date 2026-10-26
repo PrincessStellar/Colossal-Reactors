@@ -274,7 +274,7 @@ public class HeatingCoilRecipeCategory implements IRecipeCategory<HeatingCoilJei
     }
 
     @Override
-    public @Nullable Identifier getRegistryName(HeatingCoilJeiRecipe recipe) {
+    public @Nullable Identifier getIdentifier(HeatingCoilJeiRecipe recipe) {
         return ViewerRecipeIds.heatingCoilDisplayLocation(
                 recipe.recipeId(), recipe.coilId(), recipe.optionIndex());
     }

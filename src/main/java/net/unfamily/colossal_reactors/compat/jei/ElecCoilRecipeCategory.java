@@ -95,7 +95,7 @@ public class ElecCoilRecipeCategory implements IRecipeCategory<ElecCoilJeiRecipe
     }
 
     @Override
-    public @Nullable Identifier getRegistryName(ElecCoilJeiRecipe recipe) {
+    public @Nullable Identifier getIdentifier(ElecCoilJeiRecipe recipe) {
         return ViewerRecipeIds.registryName(recipe.recipeId());
     }
 }

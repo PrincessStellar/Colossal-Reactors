@@ -5,7 +5,7 @@ import net.unfamily.colossal_reactors.ColossalReactors;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Datapack {@link Identifier} for JEI {@code getRegistryName} / EMI / REI / KubeJS.
+ * Datapack {@link Identifier} for JEI {@code getIdentifier} / EMI / REI / KubeJS.
  *
  * <p>Every Colossal RecipeManager id is shown as-is. Liquid/gas variants of one coolant or
  * turbine entry share that same id in one viewer card (slots cycle both media).

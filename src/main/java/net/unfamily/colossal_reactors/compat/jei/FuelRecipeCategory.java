@@ -168,7 +168,7 @@ public class FuelRecipeCategory implements IRecipeCategory<FuelJeiRecipe> {
     }
 
     @Override
-    public @Nullable Identifier getRegistryName(FuelJeiRecipe recipe) {
+    public @Nullable Identifier getIdentifier(FuelJeiRecipe recipe) {
         return ViewerRecipeIds.registryName(recipe.recipeId());
     }
 }
