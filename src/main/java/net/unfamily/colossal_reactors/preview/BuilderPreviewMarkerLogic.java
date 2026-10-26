@@ -27,15 +27,18 @@ import java.util.List;
 /**
  * Shared reactor/turbine footprint marker rules for server preview packets and client reconcile.
  * Always emits baseline colors together with occupied when both apply so layer cache can restore
- * after a wrong block is removed. Outer shell edges use AreaBorderRenderer on the client —
+ * after a wrong block is removed. Outer shell edges use InsetAreaBorderRenderer on the client —
  * this logic no longer emits {@link #COLOR_FRAME_EDGE} per cell.
+ * <p>
+ * Structure baselines (rods, blades, controllers) can also be emitted as long inclusive boxes
+ * via {@link BoxSink} for client rendering without per-cell cubes.
  */
 public final class BuilderPreviewMarkerLogic {
 
     public static final int COLOR_OCCUPIED = 0xE0FF0000;
     public static final int COLOR_ROD = 0xE0FFFF00;
     public static final int COLOR_ROD_CONTROLLER = 0xE0FFFFFF;
-    /** Legacy magenta edge (shell now via AreaBorder); kept for priority / old packets. */
+    /** Legacy magenta edge (shell now via InsetAreaBorder); kept for priority / old packets. */
     public static final int COLOR_FRAME_EDGE = 0x80FF00FF;
     public static final int COLOR_CLOSURE_DECK = 0xE070D8FF;
     /** Planned turbine blade cells (orange). */
@@ -44,6 +47,12 @@ public final class BuilderPreviewMarkerLogic {
     @FunctionalInterface
     public interface MarkerSink {
         void accept(BlockPos worldPos, int color);
+    }
+
+    /** Inclusive AABB marker (min/max block corners). */
+    @FunctionalInterface
+    public interface BoxSink {
+        void accept(BlockPos minInclusive, BlockPos maxInclusive, int color);
     }
 
     private BuilderPreviewMarkerLogic() {}
@@ -274,6 +283,167 @@ public final class BuilderPreviewMarkerLogic {
         }
     }
 
+    /**
+     * Emits long rod / blade / controller boxes for client preview (not per-cell cubes).
+     */
+    public static void forEachReactorStructureBoxes(Level level, ReactorBuilderBlockEntity builder,
+                                                    BlockPos builderPos, BoxSink sink) {
+        BlockState state = level.getBlockState(builderPos);
+        if (!(state.getBlock() instanceof ReactorBuilderBlock)) {
+            return;
+        }
+        Direction facing = state.getValue(ReactorBuilderBlock.FACING);
+        AABB aabb = ReactorBuilderBlockEntity.getReactorVolumeAABB(
+                builderPos, facing,
+                builder.getSizeLeft(), builder.getSizeRight(),
+                builder.getSizeHeight(), builder.getSizeDepth());
+
+        int minX = (int) Math.floor(aabb.minX);
+        int minY = (int) Math.floor(aabb.minY);
+        int minZ = (int) Math.floor(aabb.minZ);
+        int maxX = (int) Math.floor(aabb.maxX - 1e-6);
+        int maxY = (int) Math.floor(aabb.maxY - 1e-6);
+        int maxZ = (int) Math.floor(aabb.maxZ - 1e-6);
+
+        int pattern = builder.getRodPattern();
+        int patternMode = builder.getPatternMode();
+        int w = maxX - minX + 1;
+        int h = maxY - minY + 1;
+        int d = maxZ - minZ + 1;
+        int rw = RodPatternLogic.rodSpaceWidth(w, patternMode);
+        int rd = RodPatternLogic.rodSpaceDepth(d, patternMode);
+        int insetXZ = RodPatternLogic.rodSpaceInsetXZ(patternMode);
+        boolean expansionRodAtCenter = (pattern == RodPatternLogic.PATTERN_EXPANSION)
+                ? RodPatternLogic.getExpansionRodAtCenterForPreview(rw, rd)
+                : false;
+
+        int rodY0 = minY + 1;
+        int rodY1 = minY + h - 2;
+        if (rodY1 < rodY0) {
+            return;
+        }
+        int rodControllerY = minY + h - 1;
+        for (int rx = 0; rx < rw; rx++) {
+            for (int rz = 0; rz < rd; rz++) {
+                if (!isReactorRodColumn(builder, rx, rz, rw, rd, pattern, expansionRodAtCenter)) {
+                    continue;
+                }
+                int wx = minX + insetXZ + rx;
+                int wz = minZ + insetXZ + rz;
+                sink.accept(new BlockPos(wx, rodY0, wz), new BlockPos(wx, rodY1, wz), COLOR_ROD);
+                BlockPos ctrl = new BlockPos(wx, rodControllerY, wz);
+                sink.accept(ctrl, ctrl, COLOR_ROD_CONTROLLER);
+            }
+        }
+    }
+
+    /**
+     * Emits long turbine rod / blade / controller boxes for client preview.
+     */
+    public static void forEachTurbineStructureBoxes(Level level, TurbineBuilderBlockEntity builder,
+                                                    BlockPos builderPos, BoxSink sink) {
+        BlockState state = level.getBlockState(builderPos);
+        if (!(state.getBlock() instanceof TurbineBuilderBlock)) {
+            return;
+        }
+        Direction facing = state.getValue(TurbineBuilderBlock.FACING);
+        AABB aabb = TurbineBuilderBlockEntity.getTurbineVolumeAABB(
+                builderPos, facing,
+                builder.getSizeLeft(), builder.getSizeRight(),
+                builder.getSizeHeight(), builder.getSizeDepth());
+
+        int minX = (int) Math.floor(aabb.minX);
+        int minY = (int) Math.floor(aabb.minY);
+        int minZ = (int) Math.floor(aabb.minZ);
+        int maxX = (int) Math.floor(aabb.maxX - 1e-6);
+        int maxY = (int) Math.floor(aabb.maxY - 1e-6);
+        int maxZ = (int) Math.floor(aabb.maxZ - 1e-6);
+        int w = maxX - minX + 1;
+        int h = maxY - minY + 1;
+        int d = maxZ - minZ + 1;
+        int coilLayers = builder.getAppliedCoilLayerCount();
+        var growthAxis = builder.getPlacementAxis();
+        TurbineRotorLayout layout = TurbineRotorLayout.from(
+                minX, minY, minZ, maxX, maxY, maxZ, w, h, d, coilLayers, growthAxis);
+        int rw = layout.crossSizeA();
+        int rd = layout.crossSizeB();
+        int pattern = builder.getRodPattern();
+        java.util.function.BiPredicate<Integer, Integer> websiteRodOverride =
+                pattern == TurbineRodPatternLogic.PATTERN_WEBSITE && builder.hasValidWebsiteDesign()
+                        ? builder::websiteIsRodColumn
+                        : null;
+        List<TurbineRodControllerLayout.Center> rodCtrlCenters =
+                TurbineRodPatternLogic.rodColumns(rw, rd, pattern, websiteRodOverride);
+
+        if (layout.rodExtent() > 0) {
+            for (TurbineRodControllerLayout.Center col : rodCtrlCenters) {
+                BlockPos a = layout.rodPos(0, col.rx(), col.rz());
+                BlockPos b = layout.rodPos(layout.rodExtent() - 1, col.rx(), col.rz());
+                sink.accept(minCorner(a, b), maxCorner(a, b), COLOR_ROD);
+                BlockPos ctrl = layout.controllerPos(col);
+                sink.accept(ctrl, ctrl, COLOR_ROD_CONTROLLER);
+            }
+        }
+
+        if (rw > 0 && rd > 0) {
+            BlockPos c0 = layout.rodPos(layout.closureInteriorIndex(), 0, 0);
+            BlockPos c1 = layout.rodPos(layout.closureInteriorIndex(), rw - 1, rd - 1);
+            sink.accept(minCorner(c0, c1), maxCorner(c0, c1), COLOR_CLOSURE_DECK);
+        }
+
+        emitPlannedBladeBoxes(builder, layout, pattern, rodCtrlCenters, sink);
+    }
+
+    private static void emitPlannedBladeBoxes(
+            TurbineBuilderBlockEntity builder,
+            TurbineRotorLayout layout,
+            int pattern,
+            List<TurbineRodControllerLayout.Center> rodCtrlCenters,
+            BoxSink sink) {
+        if (rodCtrlCenters.isEmpty() || layout.rodExtent() <= 0) {
+            return;
+        }
+        boolean websiteClimb = pattern == TurbineRodPatternLogic.PATTERN_WEBSITE
+                && builder.hasValidWebsiteDesign()
+                && builder.isWebsiteClimbProfile();
+        int growth = TurbineRodPatternLogic.resolveBladeGrowth(pattern, builder.getBladeVariant(), websiteClimb);
+        int rw = layout.crossSizeA();
+        int rd = layout.crossSizeB();
+        int ringCap = TurbineRodPatternLogic.designBladeRingCap(
+                pattern, rw, rd, builder.getWebsiteBladeRingCap());
+        Direction rodAxis = layout.growthAxis();
+        List<Direction> laterals = TurbineBladePlacement.lateralDirections(rodAxis);
+        for (int t = 0; t < layout.rodExtent(); t++) {
+            for (TurbineRodControllerLayout.Center col : rodCtrlCenters) {
+                int ring = TurbineBladePlacement.effectiveTargetBladeRing(
+                        layout, t, growth, col.rx(), col.rz(), List.of(), ringCap);
+                if (ring <= 0) {
+                    continue;
+                }
+                BlockPos rodPos = layout.rodPos(t, col.rx(), col.rz());
+                for (Direction lateral : laterals) {
+                    BlockPos tipNear = rodPos.relative(lateral, 1);
+                    BlockPos tipFar = rodPos.relative(lateral, ring);
+                    sink.accept(minCorner(tipNear, tipFar), maxCorner(tipNear, tipFar), COLOR_BLADE);
+                }
+            }
+        }
+    }
+
+    private static BlockPos minCorner(BlockPos a, BlockPos b) {
+        return new BlockPos(
+                Math.min(a.getX(), b.getX()),
+                Math.min(a.getY(), b.getY()),
+                Math.min(a.getZ(), b.getZ()));
+    }
+
+    private static BlockPos maxCorner(BlockPos a, BlockPos b) {
+        return new BlockPos(
+                Math.max(a.getX(), b.getX()),
+                Math.max(a.getY(), b.getY()),
+                Math.max(a.getZ(), b.getZ()));
+    }
+
     private static void emitPlannedBlades(
             TurbineBuilderBlockEntity builder,
             TurbineRotorLayout layout,
@@ -330,8 +500,11 @@ public final class BuilderPreviewMarkerLogic {
         sink.accept(ctrlPos, COLOR_ROD_CONTROLLER);
     }
 
+    /**
+     * Anything that is not air occupies build space (blocks, fluids, replaceable foliage, etc.).
+     */
     private static boolean hasSolidBlock(BlockState state) {
-        return !state.isAir() && !state.canBeReplaced();
+        return !state.isAir();
     }
 
     private static boolean isReactorRodColumn(ReactorBuilderBlockEntity builder, int rx, int rz, int rw, int rd,

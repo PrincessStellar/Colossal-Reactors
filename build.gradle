@@ -142,7 +142,7 @@ configurations {
 dependencies {
     // Only dependencies currently available for 26.1.2
     // iska_lib: NeoForge 26.x only — do not add to Colossal Reactors 1.21.1
-    implementation files('libs/iska_lib-1.12.0.1.4.jar')
+    implementation files('libs/iska_lib-1.13.0.0.0.jar')
     implementation "curse.maven:another-config-manager-1719301:9018481"
     // compileOnly Brandon's Core: needed to compile HighCondPowerPortOpStorage. Runtime OP is gated
     // by BrandonScoreIntegration.OP_SUPPORT_ENABLED (false until BC/Draconic exists for 26.x).
