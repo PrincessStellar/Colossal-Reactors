@@ -27,16 +27,17 @@ categories:
 
 - Dentro você precisa de espaço para **barras e hélices**, uma seção de **bobinas**, **portas** nas paredes e um **Controlador da Turbina** numa **parede lateral** externa (norte, sul, leste ou oeste — não no topo ou na base da caixa).
 
-## Controlador de barras
+## Controladores de barras
 
 <ItemImage id="turbine_rod_controller" scale="4" />
 
-Você precisa de **exatamente um** **Controlador da Barra da Turbina** na **camada superior da seção do rotor**. Ele define a direção do eixo (você pode orientá-lo em **seis direções**, como uma bobina de aquecimento).
+Coloque blocos de **Controlador da Barra da Turbina** na **plataforma de fechamento** — a camada de revestimento que separa o **rotor** (abaixo) da **zona de bobinas** (acima). Eles definem a direção do eixo (você pode orientá-los em **seis direções**, como uma bobina de aquecimento).
 
-- Numa base de barras **ímpar × ímpar**, ele fica na célula **central**.
-- Se um lado tiver comprimento **par**, **duas** células centrais servem; se **ambos** forem pares, **quatro** células centrais servem. Qualquer uma funciona à mão; o **Construtor da Turbina** escolhe um centro para você e o destaca na prévia.
+- Você precisa de **pelo menos um**. Você pode colocar **um controlador por coluna de barras**, cada um **diretamente na célula da plataforma acima da pilha de barras dessa coluna**.
+- Todos os controladores devem estar no **mesmo plano da plataforma** e com a **mesma orientação**.
+- Os controladores **não** ficam na borda externa da casca.
 
-- As colunas de barras seguem o seu padrão no volume **abaixo** da seção de bobinas — elas não precisam ficar diretamente sob este bloco.
+Se alguma coluna de barras tiver barras, mas **não** tiver um controlador na célula da plataforma dela, a eficiência das hélices sofre uma penalidade de **−5%** (veja [Barras e hélices](turbine_rod_and_blades.md)). Colocar um controlador em **cada** coluna de barras anula essa penalidade.
 
 - As barras devem se alinhar ao eixo do controlador. Barras na direção errada são corrigidas quando a turbina verifica a construção, quando possível.
 
@@ -57,6 +58,7 @@ Você precisa de **exatamente um** **Controlador da Barra da Turbina** na **cama
 | Área | Onde | O que você coloca |
 |------|--------|-------------------|
 | **Rotor** | Interior principal, abaixo das bobinas | Barras, hélices |
+| **Plataforma de fechamento** | Camada entre o rotor e as bobinas | Revestimento + controladores de barras acima das colunas de barras |
 | **Bobinas** | Camadas superiores internas | Blocos de armazenamento de metal (ouro, cobre…) |
 | **Portas** | Faces do revestimento | Vapor entra, RF sai, redstone |
 

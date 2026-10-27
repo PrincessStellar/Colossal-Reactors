@@ -50,11 +50,20 @@ Para o melhor bônus, adicione anéis **de baixo para cima** (o layout **Eficien
 
 Em alguns pacotes, apenas **anéis pares** (4, 8, 12 hélices numa camada etc.) contam integralmente para a capacidade de vapor — confira a configuração do mod se os números parecerem baixos.
 
+## Penalidade por falta de controlador de barra
+
+Se a turbina tiver **alguma coluna de barras** cuja célula da plataforma de fechamento **não** seja um [Controlador da Barra da Turbina](turbine_structure.md), a eficiência das hélices é multiplicada por **0,95 (−5%)**.
+
+- Um controlador num layout de eixo único: sem penalidade.
+- Layouts de várias colunas (**Hiperfluxo**, sementes do Site, construções à mão): coloque um controlador **em cada coluna de barras** para anular o −5%.
+
 ## Layouts do construtor
 
-O [Construtor da Turbina](turbine_builder.md) pode colocar barras e hélices para você:
+O [Construtor da Turbina](turbine_builder.md) pode colocar barras, hélices e controladores de barras para você:
 
-- **Eficiente** — barras em xadrez; os anéis de hélices crescem etapa a etapa (melhor para o bônus de altura).
-- **Produtivo** — barras em todos os lugares permitidos; cada camada recebe a contagem máxima de anéis imediatamente.
+- **Site** — barras a partir de uma semente de design importada; o crescimento das hélices segue o perfil de subida/completo da semente.
+- **Fluxo** — uma única coluna de barras centralizada. Um segundo controle alterna entre **Eficiente** (anéis de hélices que **sobem** camada por camada) e **Produtivo** (anéis completos em todas as camadas).
+- **Hiperfluxo** — melhor grade de múltiplas barras para a área (algoritmo da grade de barras do ModDecoded); o construtor coloca um **controlador de barra em cada coluna**. Mesma alternância Eficiente / Produtivo do Fluxo.
+- **Personalizada / Nenhum** — casca (e bobinas na Personalizada) sem o conteúdo do rotor.
 
 Colocar hélices à mão com o item segue a mesma ordem de anéis do construtor.
