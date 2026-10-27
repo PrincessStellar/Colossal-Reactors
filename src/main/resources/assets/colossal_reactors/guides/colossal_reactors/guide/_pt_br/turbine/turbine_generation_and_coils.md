@@ -22,7 +22,7 @@ Quando a turbina está **formada corretamente** e **funcionando**, ela transform
 
 - **Força das bobinas** depende de quais **blocos de armazenamento** preenchem a zona de bobinas (ouro, cobre, netherita etc. — veja abaixo).
 
-- **Bônus do layout das hélices** depende de como os anéis se empilham em altura — veja [Barras e hélices](turbine_rod_and_blades.md).
+- **Bônus do layout das hélices** depende de como os anéis se empilham em altura — veja [Barras e hélices](turbine_rod_and_blades.md). Se alguma coluna de barras não tiver um controlador de barra na plataforma de fechamento, esse bônus também é reduzido em **−5%**.
 
 As configurações do pacote também podem multiplicar a saída total de RF ou o uso de vapor para cima ou para baixo.
 

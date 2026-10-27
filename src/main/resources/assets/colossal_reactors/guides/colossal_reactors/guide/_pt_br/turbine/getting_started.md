@@ -74,8 +74,8 @@ Veja [Vapor, RF e bobinas](turbine_generation_and_coils.md) para a análise comp
 
 - **Suprimento de vapor** — limitado pela quantidade e pelo layout das hélices; anéis mais equilibrados → mais vapor/tique.
 - **Blocos de bobina** — blocos de armazenamento de metal nas **duas camadas interiores superiores** (cobre, ouro, netherita…). Células de bobina vazias contam como fracas (~30% de força); confira o JEI para os valores dos blocos.
-- **Bônus de altura das hélices** — anéis que crescem em direção à divisória ganham **+3%** por camada ascendente com mais hélices; anéis que encolhem perdem **−3%**. Layouts **Eficiente** vs **Produtivo** fazem diferença — veja [Barras e hélices](turbine_rod_and_blades.md).
-- **Formação válida** — casca, bobinas, controlador de barras e portas precisam validar antes de a geração rodar.
+- **Bônus de altura das hélices** — anéis que crescem em direção à divisória ganham **+3%** por camada ascendente com mais hélices; anéis que encolhem perdem **−3%**. Construções com várias colunas precisam de um **controlador de barra em cada coluna** ou sofrem **−5%** — veja [Barras e hélices](turbine_rod_and_blades.md).
+- **Formação válida** — casca, bobinas, controlador(es) de barra na plataforma de fechamento e portas precisam validar antes de a geração rodar.
 
 ## Configuração 1: Energia simples (vapor independente)
 
